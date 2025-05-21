@@ -1,0 +1,1620 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BSC交易分析器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+        }
+
+        body {
+            background-color: #f5f8fa;
+            color: #333;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #213547;
+            margin-bottom: 20px;
+        }
+
+        .search-form {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .search-form input {
+            flex: 1;
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+
+        .search-form button {
+            background-color: #f0b90b;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+
+        .search-form button:hover {
+            background-color: #e3af0a;
+        }
+
+        .token-price-section {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 6px;
+            border-left: 4px solid #f0b90b;
+        }
+
+        .token-price-section h3 {
+            margin-bottom: 10px;
+            color: #213547;
+        }
+
+        .token-price-input {
+            width: 100%;
+            height: 100px;
+            margin-top: 10px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+
+        .loading {
+            text-align: center;
+            margin: 20px 0;
+            display: none;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            border: 3px solid rgba(240, 185, 11, 0.3);
+            border-radius: 50%;
+            border-top-color: #f0b90b;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .error-message {
+            color: #e74c3c;
+            text-align: center;
+            margin: 10px 0;
+            display: none;
+        }
+
+        .results {
+            margin-top: 20px;
+            display: none;
+        }
+
+        .summary {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 6px;
+            border-left: 4px solid #f0b90b;
+        }
+
+        .summary h3 {
+            margin-bottom: 10px;
+            color: #213547;
+        }
+
+        .summary-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+
+        .day-summary {
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .day-header {
+            padding: 12px 15px;
+            background-color: #f0b90b;
+            color: #000;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .day-header:hover {
+            background-color: #e3af0a;
+        }
+
+        .day-header .arrow {
+            transition: transform 0.3s;
+        }
+
+        .day-header.expanded .arrow {
+            transform: rotate(180deg);
+        }
+
+        .day-content {
+            display: none;
+            padding: 15px;
+            background-color: #fff;
+        }
+
+        .day-content.expanded {
+            display: block;
+        }
+
+        .day-stats {
+            margin-bottom: 15px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        .day-summary-overview {
+            margin-top: 10px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .day-outflow-stats {
+            margin-top: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .token-badge {
+            padding: 5px 10px;
+            border-radius: 4px;
+            display: inline-flex;
+            align-items: center;
+            font-size: 14px;
+            font-weight: bold;
+            background-color: #f8f9fa;
+            border: 1px solid #ddd;
+        }
+
+        .token-badge.inflow {
+            background-color: rgba(46, 204, 113, 0.1);
+            border-color: #2ecc71;
+            color: #2ecc71;
+        }
+
+        .token-badge.outflow {
+            background-color: rgba(231, 76, 60, 0.1);
+            border-color: #e74c3c;
+            color: #e74c3c;
+        }
+
+        .token-badge.difference {
+            background-color: rgba(52, 152, 219, 0.1);
+            border-color: #3498db;
+            color: #3498db;
+        }
+
+        .token-badge.value {
+            background-color: rgba(155, 89, 182, 0.1);
+            border-color: #9b59b6;
+            color: #9b59b6;
+        }
+
+        .token-amount {
+            margin-left: 5px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th,
+        td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #f0b90b;
+            color: #000;
+            position: sticky;
+            top: 0;
+        }
+
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+            gap: 10px;
+        }
+
+        .pagination button {
+            padding: 8px 12px;
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .pagination button.active {
+            background-color: #f0b90b;
+            color: #000;
+            border-color: #f0b90b;
+        }
+
+        .pagination button:hover:not(.active) {
+            background-color: #eee;
+        }
+
+        .token-flow {
+            color: #2ecc71;
+        }
+
+        .token-flow.outflow {
+            color: #e74c3c;
+        }
+
+        .hash-link {
+            color: #3498db;
+            text-decoration: none;
+        }
+
+        .hash-link:hover {
+            text-decoration: underline;
+        }
+
+        .address-tag {
+            display: inline-block;
+            max-width: 150px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            vertical-align: middle;
+        }
+
+        .view-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .view-selector button {
+            padding: 8px 15px;
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .view-selector button.active {
+            background-color: #f0b90b;
+            color: #000;
+            border-color: #f0b90b;
+        }
+
+        .total-value {
+            margin-top: 10px;
+            font-weight: bold;
+            color: #9b59b6;
+            font-size: 16px;
+        }
+
+        /* 可折叠部分的样式 */
+        .collapsible-section {
+            margin-bottom: 20px;
+            background-color: #fff;
+            border-radius: 6px;
+            border: 1px solid #ddd;
+            overflow: hidden;
+        }
+
+        .section-header {
+            padding: 12px 15px;
+            background-color: #f0b90b;
+            color: #000;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .section-header:hover {
+            background-color: #e3af0a;
+        }
+
+        .section-header .arrow {
+            transition: transform 0.3s;
+        }
+
+        .section-header.expanded .arrow {
+            transform: rotate(180deg);
+        }
+
+        .section-content {
+            padding: 15px;
+            background-color: #fff;
+            display: none;
+        }
+
+        .section-content.expanded {
+            display: block;
+        }
+
+        .api-key-section {
+            margin-bottom: 15px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        .api-key-section h4 {
+            margin-bottom: 8px;
+            color: #213547;
+        }
+
+        .api-key-section input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        /* 全屏覆盖层样式 */
+        .cover-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            opacity: 1;
+            transition: opacity 0.3s ease;
+        }
+
+        .cover-content {
+            background-color: #fff;
+            border-radius: 8px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .cover-content h2 {
+            font-size: 24px;
+            color: #213547;
+            margin-bottom: 20px;
+        }
+
+        .cover-content p {
+            font-size: 16px;
+            color: #333;
+            margin-bottom: 25px;
+            line-height: 1.5;
+        }
+
+        .twitter-link {
+            display: inline-block;
+            background-color: #1DA1F2;
+            color: #fff;
+            padding: 12px 25px;
+            border-radius: 30px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: background-color 0.3s;
+            margin-bottom: 20px;
+        }
+
+        .twitter-link:hover {
+            background-color: #0c85d0;
+        }
+
+        .continue-button {
+            background-color: #f0b90b;
+            color: #000;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+
+        .continue-button:hover {
+            background-color: #e3af0a;
+        }
+
+        .cover-overlay.fade-out {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .countdown {
+            margin-top: 15px;
+            font-size: 14px;
+            color: #666;
+            font-style: italic;
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- 全屏覆盖提示 -->
+    <!-- 全屏覆盖提示 -->
+    <div id="cover-overlay" class="cover-overlay">
+        <div class="cover-content">
+            <h2>欢迎使用BSC交易分析器</h2>
+            <p>请先关注我们的Twitter账号以继续使用本工具</p>
+            <a href="https://x.com/kingbacktim999" target="_blank" class="twitter-link" id="twitter-link">
+                前往关注 下推特
+            </a>
+            <div id="countdown" class="countdown">工具将在 <span id="seconds-counter">3</span> 秒后可用...</div>
+        </div>
+    </div>
+    <div class="container">
+        <h1>BSC交易分析器</h1>
+
+        <div class="search-form">
+            <input type="text" id="address-input" placeholder="输入BSC地址" />
+            <button id="search-btn">分析交易</button>
+        </div>
+
+        <div class="collapsible-section">
+            <div class="section-header">
+                <h3>代币价格配置</h3>
+                <span class="arrow">▼</span>
+            </div>
+            <div class="section-content">
+                <div class="api-key-section">
+                    <h4>BSCScan API Key:</h4>
+                    <input type="text" id="api-key-input" placeholder="输入BSCScan API Key"
+                        value="M5EB4HPWR2GNI9Q2K7BAMDFMKW6G1GIVA6" />
+                </div>
+                <h4>代币价格（JSON格式：{代币地址:价格}或{代币符号:价格}）</h4>
+                <textarea id="token-price-input" class="token-price-input"
+                    placeholder='例如: {"0x123abc...":"2.5", "BNB":"300", "USDT":"1"}'>{"USDC":"1","BNB":"600","BSC-USD":"1"}</textarea>
+            </div>
+        </div>
+
+        <div class="loading">
+            <div class="loading-spinner"></div>
+            <p>正在获取交易数据，请稍候...</p>
+        </div>
+
+        <div class="error-message" id="error-message"></div>
+
+        <div class="results" id="results">
+            <div class="collapsible-section" id="summary">
+                <div class="section-header">
+                    <h3>交易统计摘要</h3>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="section-content">
+                    <div class="summary-item">
+                        <span>与目标合约的交易数量:</span>
+                        <span id="target-contract-count">0</span>
+                    </div>
+                    <div class="summary-item">
+                        <span>总消耗BNB数量:</span>
+                        <span id="total-bnb">0</span>
+                    </div>
+                    <div id="token-summary">
+                        <!-- 动态生成的代币统计将显示在这里 -->
+                    </div>
+                    <div id="total-outflow-value" class="total-value">
+                        总流出价值: 0.00 USD
+                    </div>
+                </div>
+            </div>
+
+            <h3>与合约 0xb300000b72DEAEb607a12d5f54773D1C19c7028d 的交易记录</h3>
+
+            <div class="view-selector" style="margin: 15px 0;">
+                <button id="daily-view-btn" class="active">按日期分组查看</button>
+                <button id="list-view-btn">列表查看</button>
+            </div>
+
+            <div id="daily-view">
+                <!-- 这里将添加按日期分组的交易数据 -->
+            </div>
+
+            <div id="list-view" style="display: none;">
+                <table id="transactions-table">
+                    <thead>
+                        <tr>
+                            <th>交易哈希</th>
+                            <th>时间</th>
+                            <th>Token</th>
+                            <th>流入数量</th>
+                            <th>流出数量</th>
+                            <th>消耗BNB</th>
+                            <th>状态</th>
+                        </tr>
+                    </thead>
+                    <tbody id="transactions-body">
+                        <!-- 这里将动态填充交易数据 -->
+                    </tbody>
+                </table>
+
+                <div class="pagination" id="pagination">
+                    <!-- 这里将动态填充分页按钮 -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+
+            // 处理覆盖层显示逻辑
+            function handleCoverOverlay() {
+                const coverOverlay = document.getElementById('cover-overlay');
+                const twitterLink = document.getElementById('twitter-link');
+                const countdown = document.getElementById('countdown');
+                const secondsCounter = document.getElementById('seconds-counter');
+                const hasSeenCover = localStorage.getItem('bsc_analyzer_has_seen_cover');
+
+                // 如果用户已经看过覆盖层，则不显示
+                if (hasSeenCover === 'true') {
+                    coverOverlay.style.display = 'none';
+                    return;
+                }
+
+                // 点击Twitter链接后开始倒计时
+                twitterLink.addEventListener('click', function () {
+                    // 显示倒计时
+                    // countdown.style.display = 'block';
+
+                    // 设置3秒倒计时
+                    let seconds = 3;
+                    secondsCounter.textContent = seconds;
+
+                    const timer = setInterval(function () {
+                        seconds--;
+                        secondsCounter.textContent = seconds;
+
+                        if (seconds <= 0) {
+                            clearInterval(timer);
+
+                            // 添加淡出效果
+                            coverOverlay.classList.add('fade-out');
+
+                            // 0.5秒后完全隐藏（与CSS过渡时间匹配）
+                            setTimeout(() => {
+                                coverOverlay.style.display = 'none';
+                            }, 500);
+
+                            // 记录用户已经看过覆盖层
+                            localStorage.setItem('bsc_analyzer_has_seen_cover', 'true');
+                        }
+                    }, 1000);
+                });
+            }
+
+            // 调用处理覆盖层的函数
+            handleCoverOverlay();
+
+            // 常量定义
+            const TARGET_CONTRACT = '0xb300000b72DEAEb607a12d5f54773D1C19c7028d'.toLowerCase();
+            const BSC_SCAN_API_KEY = 'M5EB4HPWR2GNI9Q2K7BAMDFMKW6G1GIVA6'; // 需要替换为实际的API密钥
+            const BSC_SCAN_API_URL = 'https://api.bscscan.com/api';
+
+            // 元素引用
+            // 元素引用
+            const apiKeyInput = document.getElementById('api-key-input'); // 添加这一行
+            const addressInput = document.getElementById('address-input');
+            const tokenPriceInput = document.getElementById('token-price-input');
+            const searchBtn = document.getElementById('search-btn');
+            const loadingElement = document.querySelector('.loading');
+            const errorMessageElement = document.getElementById('error-message');
+            const resultsElement = document.getElementById('results');
+            const totalBnbElement = document.getElementById('total-bnb');
+            const targetContractCountElement = document.getElementById('target-contract-count');
+            const tokenSummaryElement = document.getElementById('token-summary');
+            const totalOutflowValueElement = document.getElementById('total-outflow-value');
+            const transactionsBody = document.getElementById('transactions-body');
+            const paginationElement = document.getElementById('pagination');
+            const dailyViewBtn = document.getElementById('daily-view-btn');
+            const listViewBtn = document.getElementById('list-view-btn');
+            const dailyViewElement = document.getElementById('daily-view');
+            const listViewElement = document.getElementById('list-view');
+
+            // 存储所有交易数据
+            let allTransactions = [];
+            let filteredTransactions = [];
+            let tokenPriceMap = {};
+            let currentPage = 1;
+            const itemsPerPage = 10;
+
+            // 事件监听器
+            searchBtn.addEventListener('click', handleSearch);
+            addressInput.addEventListener('keypress', function (e) {
+                if (e.key === 'Enter') {
+                    handleSearch();
+                }
+            });
+
+            // 视图切换事件监听器
+            dailyViewBtn.addEventListener('click', function () {
+                dailyViewElement.style.display = 'block';
+                listViewElement.style.display = 'none';
+                dailyViewBtn.classList.add('active');
+                listViewBtn.classList.remove('active');
+            });
+
+            listViewBtn.addEventListener('click', function () {
+                dailyViewElement.style.display = 'none';
+                listViewElement.style.display = 'block';
+                listViewBtn.classList.add('active');
+                dailyViewBtn.classList.remove('active');
+            });
+
+            // 解析代币价格
+            function parseTokenPrices() {
+                try {
+                    const input = tokenPriceInput.value.trim();
+                    if (input) {
+                        tokenPriceMap = JSON.parse(input);
+                        return true;
+                    }
+                    return false;
+                } catch (error) {
+                    showError('代币价格格式无效，请使用正确的JSON格式');
+                    return false;
+                }
+            }
+
+            // 计算代币价值
+            function calculateTokenValue(symbol, amount) {
+                // 尝试通过代币符号查找价格
+                if (tokenPriceMap[symbol] !== undefined) {
+                    return amount * parseFloat(tokenPriceMap[symbol]);
+                }
+
+                // 找不到价格
+                return 0;
+            }
+
+            // 主要搜索函数
+            async function handleSearch() {
+                const address = addressInput.value.trim();
+
+                if (!address) {
+                    showError('请输入有效的BSC地址');
+                    return;
+                }
+
+                if (!isValidAddress(address)) {
+                    showError('地址格式无效，请输入正确的BSC地址');
+                    return;
+                }
+
+                // 解析代币价格
+                parseTokenPrices();
+
+                // 重置UI状态
+                resetUI();
+                showLoading(true);
+
+                try {
+                    // 获取外部交易
+                    const normalTxList = await fetchTransactions(address, 'txlist');
+                    // 获取内部交易
+                    const internalTxList = await fetchTransactions(address, 'txlistinternal');
+                    // 获取代币交易
+                    const tokenTxList = await fetchTransactions(address, 'tokentx');
+
+                    // 合并和处理交易数据
+                    allTransactions = processTransactions(address, normalTxList, internalTxList, tokenTxList);
+
+                    // 筛选与目标合约的交易
+                    filteredTransactions = allTransactions.filter(tx =>
+                        tx.to.toLowerCase() === TARGET_CONTRACT ||
+                        tx.from.toLowerCase() === TARGET_CONTRACT
+                    );
+
+                    // 如果没有交易，显示错误
+                    if (filteredTransactions.length === 0) {
+                        showError('未找到与目标合约的交易记录');
+                        showLoading(false);
+                        return;
+                    }
+
+                    // 计算统计数据
+                    calculateStatistics();
+
+                    // 创建按日期分组的数据
+                    groupTransactionsByDay();
+
+                    // 显示结果
+                    showResults();
+
+                    // 渲染第一页
+                    renderPage(1);
+
+                } catch (error) {
+                    console.error('获取交易数据时出错:', error);
+                    showError('获取交易数据时出错: ' + error.message);
+                } finally {
+                    showLoading(false);
+                }
+            }
+
+            // 从BSCScan API获取交易
+            async function fetchTransactions(address, action) {
+                try {
+                    const apiKey = apiKeyInput.value.trim() || 'M5EB4HPWR2GNI9Q2K7BAMDFMKW6G1GIVA6';
+                    const url = `${BSC_SCAN_API_URL}?module=account&action=${action}&address=${address}&startblock=0&endblock=99999999&sort=desc&apikey=${apiKey}`;
+
+                    const response = await fetch(url);
+                    const data = await response.json();
+
+                    if (data.status === '1') {
+                        return data.result || [];
+                    } else {
+                        console.warn(`获取${action}时API返回错误:`, data.message);
+                        return [];
+                    }
+                } catch (error) {
+                    console.error(`获取${action}时出错:`, error);
+                    throw new Error(`获取${action}数据失败`);
+                }
+            }
+
+            // 处理和合并交易数据
+            function processTransactions(userAddress, normalTxList, internalTxList, tokenTxList) {
+                // 创建交易映射，以哈希为键
+                const txMap = new Map();
+
+                // 处理普通交易
+                normalTxList.forEach(tx => {
+                    const bnbToken = 'BNB';
+                    const tokens = new Map();
+
+                    // 初始化BNB代币流向
+                    tokens.set(bnbToken, { inflow: 0, outflow: 0 });
+
+
+                    // 计算BNB流入/流出
+                    if (tx.value && parseFloat(tx.value) > 0) {
+                        const bnbValue = parseFloat(tx.value) / 1e18; // 转换为BNB
+
+                        if (tx.to.toLowerCase() === userAddress.toLowerCase()) {
+                            // BNB流入用户地址
+                            tokens.get(bnbToken).inflow += bnbValue;
+                        } else if (tx.from.toLowerCase() === userAddress.toLowerCase()) {
+                            // BNB从用户地址流出
+                            tokens.get(bnbToken).outflow += bnbValue;
+                        }
+                    }
+
+                    txMap.set(tx.hash, {
+                        hash: tx.hash,
+                        timeStamp: tx.timeStamp,
+                        from: tx.from,
+                        to: tx.to,
+                        value: tx.value, // BNB值（以wei为单位）
+                        gasPrice: tx.gasPrice,
+                        gasUsed: tx.gasUsed,
+                        status: tx.isError === '0' ? '成功' : '失败',
+                        tokens: tokens, // 将存储所有相关代币流向
+                        gasFee: (parseFloat(tx.gasUsed) * parseFloat(tx.gasPrice)) / 1e18 // 单位转换为BNB
+                    });
+                });
+
+                // 添加内部交易信息
+                internalTxList.forEach(tx => {
+                    // 确保交易是与用户相关的
+                    const isUserInvolved = tx.from.toLowerCase() === userAddress.toLowerCase() ||
+                        tx.to.toLowerCase() === userAddress.toLowerCase();
+
+                    if (!isUserInvolved) {
+                        return;
+                    }
+
+                    if (txMap.has(tx.hash)) {
+                        // 如果已存在，更新BNB值
+                        const existingTx = txMap.get(tx.hash);
+
+                        // 添加或更新BNB代币流向
+                        const bnbToken = 'BNB';
+                        if (!existingTx.tokens.has(bnbToken)) {
+                            existingTx.tokens.set(bnbToken, { inflow: 0, outflow: 0 });
+                        }
+
+                        const bnbValue = parseFloat(tx.value) / 1e18; // 转换为BNB
+                        if (tx.to.toLowerCase() === userAddress.toLowerCase()) {
+                            // 流入用户地址
+                            existingTx.tokens.get(bnbToken).inflow += bnbValue;
+                        } else if (tx.from.toLowerCase() === userAddress.toLowerCase()) {
+                            // 从用户地址流出
+                            existingTx.tokens.get(bnbToken).outflow += bnbValue;
+                        }
+                    } else {
+                        // 如果不存在，添加新交易
+                        const bnbToken = 'BNB';
+                        const bnbValue = parseFloat(tx.value) / 1e18; // 转换为BNB
+
+                        const tokenMap = new Map();
+                        tokenMap.set(bnbToken, {
+                            inflow: tx.to.toLowerCase() === userAddress.toLowerCase() ? bnbValue : 0,
+                            outflow: tx.from.toLowerCase() === userAddress.toLowerCase() ? bnbValue : 0
+                        });
+
+                        txMap.set(tx.hash, {
+                            hash: tx.hash,
+                            timeStamp: tx.timeStamp,
+                            from: tx.from,
+                            to: tx.to,
+                            value: tx.value,
+                            gasPrice: '0', // 内部交易没有单独的gas费用
+                            gasUsed: '0',
+                            status: '成功', // 内部交易通常是成功的
+                            tokens: tokenMap,
+                            gasFee: 0
+                        });
+                    }
+                });
+
+                // 添加代币交易信息
+                tokenTxList.forEach(tx => {
+                    // 确保交易是与用户相关的
+                    const isUserInvolved = tx.from.toLowerCase() === userAddress.toLowerCase() ||
+                        tx.to.toLowerCase() === userAddress.toLowerCase();
+
+                    if (!isUserInvolved) {
+                        return;
+                    }
+
+                    const txKey = tx.hash;
+                    const tokenSymbol = tx.tokenSymbol || 'Unknown';
+                    const tokenAddress = tx.contractAddress || '';
+                    const tokenValue = parseFloat(tx.value) / Math.pow(10, parseInt(tx.tokenDecimal));
+                    const isInflow = tx.to.toLowerCase() === userAddress.toLowerCase();
+                    const isOutflow = tx.from.toLowerCase() === userAddress.toLowerCase();
+
+                    if (txMap.has(txKey)) {
+                        // 如果已存在，更新代币流向
+                        const existingTx = txMap.get(txKey);
+
+                        if (!existingTx.tokens.has(tokenSymbol)) {
+                            existingTx.tokens.set(tokenSymbol, {
+                                inflow: 0,
+                                outflow: 0,
+                                address: tokenAddress
+                            });
+                        }
+
+                        if (isInflow) {
+                            existingTx.tokens.get(tokenSymbol).inflow += tokenValue;
+                        }
+
+                        if (isOutflow) {
+                            existingTx.tokens.get(tokenSymbol).outflow += tokenValue;
+                        }
+                    } else {
+                        // 如果不存在，添加新交易
+                        const tokenMap = new Map();
+                        tokenMap.set(tokenSymbol, {
+                            inflow: isInflow ? tokenValue : 0,
+                            outflow: isOutflow ? tokenValue : 0,
+                            address: tokenAddress
+                        });
+
+                        txMap.set(txKey, {
+                            hash: tx.hash,
+                            timeStamp: tx.timeStamp,
+                            from: tx.from,
+                            to: tx.to,
+                            value: '0', // 代币交易本身没有BNB转账
+                            gasPrice: '0',
+                            gasUsed: '0',
+                            status: '成功',
+                            tokens: tokenMap,
+                            gasFee: 0
+                        });
+                    }
+                });
+
+                // 转换Map为数组并按时间戳排序
+                return Array.from(txMap.values()).sort((a, b) => b.timeStamp - a.timeStamp);
+            }
+
+            // 计算统计数据
+            function calculateStatistics() {
+                // 创建代币统计映射
+                const tokenStats = new Map();
+                let totalBnb = 0;
+                let totalOutflowValue = 0;
+
+                filteredTransactions.forEach(tx => {
+                    // 计算gas费
+                    totalBnb += parseFloat(tx.gasFee);
+
+                    // 处理每种代币
+                    tx.tokens.forEach((tokenData, tokenSymbol) => {
+                        if (!tokenStats.has(tokenSymbol)) {
+                            tokenStats.set(tokenSymbol, {
+                                inflow: 0,
+                                outflow: 0,
+                                address: tokenData.address || ''
+                            });
+                        }
+
+                        // 累加流入和流出
+                        tokenStats.get(tokenSymbol).inflow += tokenData.inflow;
+                        tokenStats.get(tokenSymbol).outflow += tokenData.outflow;
+                    });
+                });
+
+                // 计算总流出价值
+                tokenStats.forEach((stats, tokenSymbol) => {
+                    // 尝试通过代币符号或地址查找价格
+                    let tokenPrice = 0;
+                    if (tokenPriceMap[tokenSymbol] !== undefined) {
+                        tokenPrice = parseFloat(tokenPriceMap[tokenSymbol]);
+                    } else if (stats.address && tokenPriceMap[stats.address] !== undefined) {
+                        tokenPrice = parseFloat(tokenPriceMap[stats.address]);
+                    }
+
+                    if (tokenPrice > 0) {
+                        totalOutflowValue += stats.outflow * tokenPrice;
+                    }
+                });
+
+                // 更新UI
+                totalBnbElement.textContent = totalBnb.toFixed(6);
+                targetContractCountElement.textContent = filteredTransactions.length;
+                totalOutflowValueElement.textContent = `总流出价值: ${totalOutflowValue.toFixed(2)} USD`;
+
+                // 更新代币统计区域
+                tokenSummaryElement.innerHTML = '';
+
+                // 按字母顺序排序代币
+                const sortedTokens = Array.from(tokenStats.keys()).sort();
+
+                sortedTokens.forEach(tokenSymbol => {
+                    const stats = tokenStats.get(tokenSymbol);
+
+                    // 如果既没有流入也没有流出，跳过
+                    if (stats.inflow === 0 && stats.outflow === 0) {
+                        return;
+                    }
+
+                    // 创建流入统计
+                    if (stats.inflow > 0) {
+                        const inflowItem = document.createElement('div');
+                        inflowItem.className = 'summary-item';
+                        inflowItem.innerHTML = `
+                            <span>${tokenSymbol} 流入总量:</span>
+                            <span class="token-flow">${stats.inflow.toFixed(6)}</span>
+                        `;
+                        tokenSummaryElement.appendChild(inflowItem);
+                    }
+
+                    // 创建流出统计
+                    if (stats.outflow > 0) {
+                        const outflowItem = document.createElement('div');
+                        outflowItem.className = 'summary-item';
+
+                        // 计算流出价值
+                        let outflowValue = 0;
+                        if (tokenPriceMap[tokenSymbol] !== undefined) {
+                            outflowValue = stats.outflow * parseFloat(tokenPriceMap[tokenSymbol]);
+                        } else if (stats.address && tokenPriceMap[stats.address] !== undefined) {
+                            outflowValue = stats.outflow * parseFloat(tokenPriceMap[stats.address]);
+                        }
+
+                        let valueText = '';
+                        if (outflowValue > 0) {
+                            valueText = ` (价值: ${outflowValue.toFixed(2)} USD)`;
+                        }
+
+                        outflowItem.innerHTML = `
+                            <span>${tokenSymbol} 流出总量:</span>
+                            <span class="token-flow outflow">${stats.outflow.toFixed(6)}${valueText}</span>
+                        `;
+                        tokenSummaryElement.appendChild(outflowItem);
+                    }
+
+                    // 添加净流入/流出统计
+                    const netFlow = stats.inflow - stats.outflow;
+                    if (Math.abs(netFlow) > 0.000001) {
+                        const netFlowItem = document.createElement('div');
+                        netFlowItem.className = 'summary-item';
+                        const isNetInflow = netFlow > 0;
+                        netFlowItem.innerHTML = `
+                            <span>${tokenSymbol} 净${isNetInflow ? '流入' : '流出'}:</span>
+                            <span class="token-flow ${isNetInflow ? '' : 'outflow'}">${Math.abs(netFlow).toFixed(6)}</span>
+                        `;
+                        tokenSummaryElement.appendChild(netFlowItem);
+                    }
+                });
+            }
+
+            // 渲染特定页面的交易
+            function renderPage(page) {
+                currentPage = page;
+                transactionsBody.innerHTML = '';
+
+                const startIndex = (page - 1) * itemsPerPage;
+                const endIndex = Math.min(startIndex + itemsPerPage, filteredTransactions.length);
+
+                for (let i = startIndex; i < endIndex; i++) {
+                    const tx = filteredTransactions[i];
+
+                    // 格式化时间戳
+                    const date = new Date(parseInt(tx.timeStamp) * 1000);
+                    const formattedDate = date.toLocaleString('zh-CN');
+
+                    // 处理每种代币
+                    tx.tokens.forEach((tokenData, tokenSymbol) => {
+                        // 只有当有流入或流出时才添加行
+                        if (tokenData.inflow > 0 || tokenData.outflow > 0) {
+                            const row = document.createElement('tr');
+
+                            // 创建链接到BSCScan的交易哈希
+                            const hashCell = document.createElement('td');
+                            const hashLink = document.createElement('a');
+                            hashLink.href = `https://bscscan.com/tx/${tx.hash}`;
+                            hashLink.target = '_blank';
+                            hashLink.className = 'hash-link';
+                            hashLink.textContent = tx.hash.substring(0, 10) + '...';
+                            hashCell.appendChild(hashLink);
+
+                            row.innerHTML = `
+                                <td></td>
+                                <td>${formattedDate}</td>
+                                <td>${tokenSymbol}</td>
+                                <td class="token-flow">${tokenData.inflow > 0 ? tokenData.inflow.toFixed(6) : '-'}</td>
+                                <td class="token-flow outflow">${tokenData.outflow > 0 ? tokenData.outflow.toFixed(6) : '-'}</td>
+                                <td>${tx.gasFee.toFixed(6)} BNB</td>
+                                <td>${tx.status}</td>
+                            `;
+
+                            row.replaceChild(hashCell, row.children[0]);
+                            transactionsBody.appendChild(row);
+                        }
+                    });
+                }
+
+                // 更新分页
+                renderPagination();
+            }
+
+            // 渲染分页控件
+            function renderPagination() {
+                paginationElement.innerHTML = '';
+
+                const totalPages = Math.ceil(filteredTransactions.length / itemsPerPage);
+
+                // 添加上一页按钮
+                if (currentPage > 1) {
+                    const prevButton = document.createElement('button');
+                    prevButton.textContent = '上一页';
+                    prevButton.addEventListener('click', () => renderPage(currentPage - 1));
+                    paginationElement.appendChild(prevButton);
+                }
+
+                // 添加页码按钮
+                const maxVisiblePages = 5;
+                let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+                const endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+
+                // 调整startPage以确保我们显示足够的页码
+                startPage = Math.max(1, endPage - maxVisiblePages + 1);
+
+                for (let i = startPage; i <= endPage; i++) {
+                    const pageButton = document.createElement('button');
+                    pageButton.textContent = i;
+                    pageButton.className = i === currentPage ? 'active' : '';
+                    pageButton.addEventListener('click', () => renderPage(i));
+                    paginationElement.appendChild(pageButton);
+                }
+
+                // 添加下一页按钮
+                if (currentPage < totalPages) {
+                    const nextButton = document.createElement('button');
+                    nextButton.textContent = '下一页';
+                    nextButton.addEventListener('click', () => renderPage(currentPage + 1));
+                    paginationElement.appendChild(nextButton);
+                }
+            }
+
+            // 辅助函数
+            function isValidAddress(address) {
+                // 简单的BEP20地址格式验证
+                return /^(0x)?[0-9a-fA-F]{40}$/.test(address);
+            }
+
+            function showLoading(isLoading) {
+                loadingElement.style.display = isLoading ? 'block' : 'none';
+            }
+
+            function showError(message) {
+                errorMessageElement.textContent = message;
+                errorMessageElement.style.display = 'block';
+                resultsElement.style.display = 'none';
+            }
+
+            function showResults() {
+                errorMessageElement.style.display = 'none';
+                resultsElement.style.display = 'block';
+            }
+
+            function resetUI() {
+                errorMessageElement.style.display = 'none';
+                resultsElement.style.display = 'none';
+                transactionsBody.innerHTML = '';
+                paginationElement.innerHTML = '';
+                tokenSummaryElement.innerHTML = '';
+                dailyViewElement.innerHTML = '';
+                totalBnbElement.textContent = '0';
+                targetContractCountElement.textContent = '0';
+                totalOutflowValueElement.textContent = '总流出价值: 0.00 USD';
+
+                // 默认显示日期视图
+                dailyViewElement.style.display = 'block';
+                listViewElement.style.display = 'none';
+                dailyViewBtn.classList.add('active');
+                listViewBtn.classList.remove('active');
+            }
+
+            // 按天分组交易
+            function groupTransactionsByDay() {
+                // 创建日期映射，以UTC日期为键
+                const dayMap = new Map();
+
+                filteredTransactions.forEach(tx => {
+                    // 将时间戳转换为UTC日期 (YYYY-MM-DD格式)
+                    const date = new Date(parseInt(tx.timeStamp) * 1000);
+                    const utcDate = date.toISOString().split('T')[0];
+
+                    if (!dayMap.has(utcDate)) {
+                        dayMap.set(utcDate, {
+                            date: utcDate,
+                            transactions: [],
+                            tokenStats: new Map(),
+                            totalBnb: 0
+                        });
+                    }
+
+                    // 将交易添加到对应的日期
+                    const dayData = dayMap.get(utcDate);
+                    dayData.transactions.push(tx);
+                    dayData.totalBnb += parseFloat(tx.gasFee);
+
+                    // 更新该日期的代币统计
+                    tx.tokens.forEach((tokenData, tokenSymbol) => {
+                        if (!dayData.tokenStats.has(tokenSymbol)) {
+                            dayData.tokenStats.set(tokenSymbol, {
+                                inflow: 0,
+                                outflow: 0,
+                                address: tokenData.address || ''
+                            });
+                        }
+
+                        // 累加流入和流出
+                        dayData.tokenStats.get(tokenSymbol).inflow += tokenData.inflow;
+                        dayData.tokenStats.get(tokenSymbol).outflow += tokenData.outflow;
+                    });
+                });
+
+                // 按日期排序（从新到旧）
+                const sortedDays = Array.from(dayMap.entries())
+                    .sort((a, b) => new Date(b[0]) - new Date(a[0]));
+
+                // 渲染日期视图
+                renderDailyView(sortedDays);
+            }
+
+            // 渲染按日期分组的视图
+            function renderDailyView(sortedDays) {
+                dailyViewElement.innerHTML = '';
+
+                sortedDays.forEach(([dateString, dayData]) => {
+                    // 创建日期容器
+                    const dayContainer = document.createElement('div');
+                    dayContainer.className = 'day-summary';
+
+                    // 格式化日期显示
+                    const date = new Date(dateString);
+                    const formattedDate = date.toLocaleDateString('zh-CN', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        weekday: 'long'
+                    });
+
+                    // 找出不平衡的代币（流入流出不相等）
+                    const imbalancedTokens = findImbalancedTokens(dayData.tokenStats);
+
+                    // 获取所有具有流出值的代币
+                    const outflowTokens = getOutflowTokens(dayData.tokenStats);
+
+                    // 计算日流出总价值
+                    let dailyOutflowValue = 0;
+                    outflowTokens.forEach(token => {
+                        // 尝试通过代币符号或地址查找价格
+                        let tokenPrice = 0;
+                        if (tokenPriceMap[token.symbol] !== undefined) {
+                            tokenPrice = parseFloat(tokenPriceMap[token.symbol]);
+                        } else if (token.address && tokenPriceMap[token.address] !== undefined) {
+                            tokenPrice = parseFloat(tokenPriceMap[token.address]);
+                        }
+
+                        if (tokenPrice > 0) {
+                            dailyOutflowValue += token.outflow * tokenPrice;
+                        }
+                    });
+
+                    // 创建日期头部
+                    const dayHeader = document.createElement('div');
+                    dayHeader.className = 'day-header';
+
+                    // 创建日期摘要部分
+                    let headerContent = `
+                        <div>
+                            <div>${formattedDate} (${dayData.transactions.length}笔交易)</div>
+                    `;
+
+                    // 添加流出代币徽章
+                    if (outflowTokens.length > 0) {
+                        headerContent += `<div class="day-outflow-stats">`;
+                        outflowTokens.forEach(token => {
+                            // 获取代币价格和价值
+                            let tokenPrice = 0;
+                            let tokenValue = 0;
+
+                            if (tokenPriceMap[token.symbol] !== undefined) {
+                                tokenPrice = parseFloat(tokenPriceMap[token.symbol]);
+                                tokenValue = token.outflow * tokenPrice;
+                            } else if (token.address && tokenPriceMap[token.address] !== undefined) {
+                                tokenPrice = parseFloat(tokenPriceMap[token.address]);
+                                tokenValue = token.outflow * tokenPrice;
+                            }
+
+                            let valueText = '';
+                            if (tokenValue > 0) {
+                                valueText = ` <span class="token-badge value">价值: ${tokenValue.toFixed(2)} USD</span>`;
+                            }
+
+                            headerContent += `
+                                <span class="token-badge outflow">
+                                    ${token.symbol} 流出: ${token.outflow.toFixed(4)}
+                                </span>${valueText}
+                            `;
+                        });
+
+                        // 添加日流出总价值
+                        if (dailyOutflowValue > 0) {
+                            headerContent += `
+                                <span class="token-badge value">
+                                    总流出价值: ${dailyOutflowValue.toFixed(2)} USD (+ ${1 + Math.floor(Math.log2(dailyOutflowValue))} Point)
+                                </span>
+                            `;
+                        }
+
+                        headerContent += `</div>`;
+                    }
+
+                    // 如果有不平衡的代币，添加它们的徽章
+                    if (imbalancedTokens.length > 0) {
+                        headerContent += `<div class="day-summary-overview">`;
+                        imbalancedTokens.forEach(token => {
+                            const netFlow = token.inflow - token.outflow;
+                            const isInflow = netFlow > 0;
+                            headerContent += `
+                                <span class="token-badge difference">
+                                    ${token.symbol} 差额: 
+                                    <span class="token-amount">${isInflow ? '+' : '-'}${Math.abs(netFlow).toFixed(4)}</span>
+                                </span>
+                            `;
+                        });
+                        headerContent += `</div>`;
+                    }
+
+                    headerContent += `</div><span class="arrow">▼</span>`;
+
+                    dayHeader.innerHTML = headerContent;
+
+                    // 创建日期内容
+                    const dayContent = document.createElement('div');
+                    dayContent.className = 'day-content';
+
+                    // 添加日期统计
+                    const dayStats = document.createElement('div');
+                    dayStats.className = 'day-stats';
+
+                    // 添加BNB消耗统计
+                    const bnbStat = document.createElement('div');
+                    bnbStat.className = 'summary-item';
+                    bnbStat.innerHTML = `
+                        <span>消耗BNB数量:</span>
+                        <span>${dayData.totalBnb.toFixed(6)} BNB</span>
+                    `;
+                    dayStats.appendChild(bnbStat);
+
+                    // 按字母顺序排序代币
+                    const sortedTokens = Array.from(dayData.tokenStats.keys()).sort();
+
+                    // 添加代币统计
+                    sortedTokens.forEach(tokenSymbol => {
+                        const stats = dayData.tokenStats.get(tokenSymbol);
+
+                        // 只有当有流入或流出时才显示
+                        if (stats.inflow > 0 || stats.outflow > 0) {
+                            // 创建流入统计
+                            if (stats.inflow > 0) {
+                                const inflowItem = document.createElement('div');
+                                inflowItem.className = 'summary-item';
+                                inflowItem.innerHTML = `
+                                    <span>${tokenSymbol} 流入:</span>
+                                    <span class="token-flow">${stats.inflow.toFixed(6)}</span>
+                                `;
+                                dayStats.appendChild(inflowItem);
+                            }
+
+                            // 创建流出统计
+                            if (stats.outflow > 0) {
+                                const outflowItem = document.createElement('div');
+                                outflowItem.className = 'summary-item';
+
+                                // 计算流出价值
+                                let tokenValue = 0;
+                                if (tokenPriceMap[tokenSymbol] !== undefined) {
+                                    tokenValue = stats.outflow * parseFloat(tokenPriceMap[tokenSymbol]);
+                                } else if (stats.address && tokenPriceMap[stats.address] !== undefined) {
+                                    tokenValue = stats.outflow * parseFloat(tokenPriceMap[stats.address]);
+                                }
+
+                                let valueText = '';
+                                if (tokenValue > 0) {
+                                    valueText = ` (价值: ${tokenValue.toFixed(2)} USD)`;
+                                }
+
+                                outflowItem.innerHTML = `
+                                    <span>${tokenSymbol} 流出:</span>
+                                    <span class="token-flow outflow">${stats.outflow.toFixed(6)}${valueText}</span>
+                                `;
+                                dayStats.appendChild(outflowItem);
+                            }
+
+                            // 添加净流入/流出统计
+                            const netFlow = stats.inflow - stats.outflow;
+                            if (Math.abs(netFlow) > 0.000001) {
+                                const netFlowItem = document.createElement('div');
+                                netFlowItem.className = 'summary-item';
+                                const isNetInflow = netFlow > 0;
+                                netFlowItem.innerHTML = `
+                                    <span>${tokenSymbol} 净${isNetInflow ? '流入' : '流出'}:</span>
+                                    <span class="token-flow ${isNetInflow ? '' : 'outflow'}">${Math.abs(netFlow).toFixed(6)}</span>
+                                `;
+                                dayStats.appendChild(netFlowItem);
+                            }
+                        }
+                    });
+
+                    dayContent.appendChild(dayStats);
+
+                    // 创建交易表格
+                    const txTable = document.createElement('table');
+                    txTable.innerHTML = `
+                        <thead>
+                            <tr>
+                                <th>交易哈希</th>
+                                <th>时间(UTC)</th>
+                                <th>Token</th>
+                                <th>流入数量</th>
+                                <th>流出数量</th>
+                                <th>消耗BNB</th>
+                                <th>状态</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    `;
+
+                    const txBody = txTable.querySelector('tbody');
+
+                    // 添加交易行
+                    dayData.transactions.forEach(tx => {
+                        // 将UTC时间戳转换为本地时间
+                        const txDate = new Date(parseInt(tx.timeStamp) * 1000);
+                        const formattedTime = txDate.toLocaleTimeString('zh-CN');
+
+                        // 处理每种代币
+                        tx.tokens.forEach((tokenData, tokenSymbol) => {
+                            // 只有当有流入或流出时才添加行
+                            if (tokenData.inflow > 0 || tokenData.outflow > 0) {
+                                const row = document.createElement('tr');
+
+                                // 创建链接到BSCScan的交易哈希
+                                const hashCell = document.createElement('td');
+                                const hashLink = document.createElement('a');
+                                hashLink.href = `https://bscscan.com/tx/${tx.hash}`;
+                                hashLink.target = '_blank';
+                                hashLink.className = 'hash-link';
+                                hashLink.textContent = tx.hash.substring(0, 10) + '...';
+                                hashCell.appendChild(hashLink);
+
+                                // 计算流出价值
+                                let tokenValue = 0;
+                                let valueText = '';
+
+                                if (tokenData.outflow > 0) {
+                                    if (tokenPriceMap[tokenSymbol] !== undefined) {
+                                        tokenValue = tokenData.outflow * parseFloat(tokenPriceMap[tokenSymbol]);
+                                    } else if (tokenData.address && tokenPriceMap[tokenData.address] !== undefined) {
+                                        tokenValue = tokenData.outflow * parseFloat(tokenPriceMap[tokenData.address]);
+                                    }
+
+                                    if (tokenValue > 0) {
+                                        valueText = ` (${tokenValue.toFixed(2)} USD)`;
+                                    }
+                                }
+
+                                row.innerHTML = `
+                                    <td></td>
+                                    <td>${formattedTime}</td>
+                                    <td>${tokenSymbol}</td>
+                                    <td class="token-flow">${tokenData.inflow > 0 ? tokenData.inflow.toFixed(6) : '-'}</td>
+                                    <td class="token-flow outflow">${tokenData.outflow > 0 ? tokenData.outflow.toFixed(6) + valueText : '-'}</td>
+                                    <td>${tx.gasFee.toFixed(6)} BNB</td>
+                                    <td>${tx.status}</td>
+                                `;
+
+                                row.replaceChild(hashCell, row.children[0]);
+                                txBody.appendChild(row);
+                            }
+                        });
+                    });
+
+                    dayContent.appendChild(txTable);
+
+                    // 添加事件监听器以展开/折叠内容
+                    dayHeader.addEventListener('click', function () {
+                        this.classList.toggle('expanded');
+                        dayContent.classList.toggle('expanded');
+                    });
+
+                    // 组装日期容器
+                    dayContainer.appendChild(dayHeader);
+                    dayContainer.appendChild(dayContent);
+
+                    // 添加到日期视图
+                    dailyViewElement.appendChild(dayContainer);
+                });
+            }
+
+            // 查找不平衡的代币（流入流出不相等）
+            function findImbalancedTokens(tokenStats) {
+                const imbalancedTokens = [];
+
+                tokenStats.forEach((stats, symbol) => {
+                    const netFlow = stats.inflow - stats.outflow;
+                    // 如果净流动量不为零且数值有一定意义（避免显示极小数值）
+                    if (Math.abs(netFlow) > 0.000001) {
+                        imbalancedTokens.push({
+                            symbol: symbol,
+                            inflow: stats.inflow,
+                            outflow: stats.outflow,
+                            netFlow: netFlow,
+                            address: stats.address || ''
+                        });
+                    }
+                });
+
+                // 按照绝对净流量大小降序排序
+                return imbalancedTokens.sort((a, b) => Math.abs(b.netFlow) - Math.abs(a.netFlow));
+            }
+
+            // 获取所有有流出值的代币
+            function getOutflowTokens(tokenStats) {
+                const outflowTokens = [];
+
+                tokenStats.forEach((stats, symbol) => {
+                    if (stats.outflow > 0.000001) {
+                        outflowTokens.push({
+                            symbol: symbol,
+                            outflow: stats.outflow,
+                            address: stats.address || ''
+                        });
+                    }
+                });
+
+                // 按照流出量大小降序排序
+                return outflowTokens.sort((a, b) => b.outflow - a.outflow);
+            }
+
+            // 初始化可折叠部分
+            function initCollapsibleSections() {
+                document.querySelectorAll('.section-header').forEach(header => {
+                    header.addEventListener('click', function () {
+                        this.classList.toggle('expanded');
+                        const content = this.nextElementSibling;
+                        content.classList.toggle('expanded');
+                    });
+
+                    // 默认折叠状态
+                    header.classList.remove('expanded');
+                    header.nextElementSibling.classList.remove('expanded');
+                });
+            }
+
+            // 处理URL哈希并执行查询
+            function handleUrlHash() {
+                const hash = window.location.hash;
+                if (hash && hash.length > 1) {
+                    const address = hash.substring(1); // 移除#字符
+                    if (isValidAddress(address)) {
+                        addressInput.value = address;
+                        handleSearch();
+                    }
+                }
+            }
+
+            // 初始化可折叠部分
+            initCollapsibleSections();
+
+            // 处理URL哈希
+            handleUrlHash();
+
+            // 监听哈希变化
+            window.addEventListener('hashchange', handleUrlHash);
+        });
+    </script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/vcd15cbe7772f49c399c6a5babf22c1241717689176015" integrity="sha512-ZpsOmlRQV6y907TI0dKBHq9Md29nnaEIPlkf84rnaERnq6zvWvPUqr2ft8M1aS28oN72PdrCzSjY4U6VaAw1EQ==" data-cf-beacon='{"rayId":"94318020ecb9f5e5","version":"2025.4.0-1-g37f21b1","r":1,"token":"c2bf6a494b08481c946e8196424d7a18","serverTiming":{"name":{"cfExtPri":true,"cfL4":true,"cfSpeedBrain":true,"cfCacheStatus":true}}}' crossorigin="anonymous"></script>
+</body>
+
+</html>
