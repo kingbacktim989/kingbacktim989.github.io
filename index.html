@@ -3,1454 +3,644 @@
 <html lang="zh-CN">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BSC交易分析器</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
-        }
-
-        body {
-            background-color: #f5f8fa;
-            color: #333;
-            padding: 20px;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background-color: #fff;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            padding: 20px;
-        }
-
-        h1 {
-            text-align: center;
-            color: #213547;
-            margin-bottom: 20px;
-        }
-
-        .search-form {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-
-        .search-form input {
-            flex: 1;
-            padding: 10px 15px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 16px;
-        }
-
-        .search-form button {
-            background-color: #f0b90b;
-            color: #000;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: bold;
-            transition: background-color 0.3s;
-        }
-
-        .search-form button:hover {
-            background-color: #e3af0a;
-        }
-
-        .token-price-section {
-            margin-bottom: 20px;
-            padding: 15px;
-            background-color: #f8f9fa;
-            border-radius: 6px;
-            border-left: 4px solid #f0b90b;
-        }
-
-        .token-price-section h3 {
-            margin-bottom: 10px;
-            color: #213547;
-        }
-
-        .token-price-input {
-            width: 100%;
-            height: 100px;
-            margin-top: 10px;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-family: monospace;
-        }
-
-        .loading {
-            text-align: center;
-            margin: 20px 0;
-            display: none;
-        }
-
-        .loading-spinner {
-            display: inline-block;
-            width: 30px;
-            height: 30px;
-            border: 3px solid rgba(240, 185, 11, 0.3);
-            border-radius: 50%;
-            border-top-color: #f0b90b;
-            animation: spin 1s ease-in-out infinite;
-        }
-
-        @keyframes spin {
-            to {
-                transform: rotate(360deg);
-            }
-        }
-
-        .error-message {
-            color: #e74c3c;
-            text-align: center;
-            margin: 10px 0;
-            display: none;
-        }
-
-        .results {
-            margin-top: 20px;
-            display: none;
-        }
-
-        .summary {
-            margin-bottom: 20px;
-            padding: 15px;
-            background-color: #f8f9fa;
-            border-radius: 6px;
-            border-left: 4px solid #f0b90b;
-        }
-
-        .summary h3 {
-            margin-bottom: 10px;
-            color: #213547;
-        }
-
-        .summary-item {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 5px;
-        }
-
-        .day-summary {
-            margin-bottom: 15px;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            overflow: hidden;
-        }
-
-        .day-header {
-            padding: 12px 15px;
-            background-color: #f0b90b;
-            color: #000;
-            font-weight: bold;
-            cursor: pointer;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .day-header:hover {
-            background-color: #e3af0a;
-        }
-
-        .day-header .arrow {
-            transition: transform 0.3s;
-        }
-
-        .day-header.expanded .arrow {
-            transform: rotate(180deg);
-        }
-
-        .day-content {
-            display: none;
-            padding: 15px;
-            background-color: #fff;
-        }
-
-        .day-content.expanded {
-            display: block;
-        }
-
-        .day-stats {
-            margin-bottom: 15px;
-            padding: 10px;
-            background-color: #f8f9fa;
-            border-radius: 4px;
-        }
-
-        .day-summary-overview {
-            margin-top: 10px;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-
-        .day-outflow-stats {
-            margin-top: 10px;
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
-
-        .token-badge {
-            padding: 5px 10px;
-            border-radius: 4px;
-            display: inline-flex;
-            align-items: center;
-            font-size: 14px;
-            font-weight: bold;
-            background-color: #f8f9fa;
-            border: 1px solid #ddd;
-        }
-
-        .token-badge.inflow {
-            background-color: rgba(46, 204, 113, 0.1);
-            border-color: #2ecc71;
-            color: #2ecc71;
-        }
-
-        .token-badge.outflow {
-            background-color: rgba(231, 76, 60, 0.1);
-            border-color: #e74c3c;
-            color: #e74c3c;
-        }
-
-        .token-badge.difference {
-            background-color: rgba(52, 152, 219, 0.1);
-            border-color: #3498db;
-            color: #3498db;
-        }
-
-        .token-badge.value {
-            background-color: rgba(155, 89, 182, 0.1);
-            border-color: #9b59b6;
-            color: #9b59b6;
-        }
-
-        .token-amount {
-            margin-left: 5px;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-
-        th,
-        td {
-            padding: 12px 15px;
-            text-align: left;
-            border-bottom: 1px solid #ddd;
-        }
-
-        th {
-            background-color: #f0b90b;
-            color: #000;
-            position: sticky;
-            top: 0;
-        }
-
-        tr:hover {
-            background-color: #f5f5f5;
-        }
-
-        .pagination {
-            display: flex;
-            justify-content: center;
-            margin-top: 20px;
-            gap: 10px;
-        }
-
-        .pagination button {
-            padding: 8px 12px;
-            background-color: #fff;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-
-        .pagination button.active {
-            background-color: #f0b90b;
-            color: #000;
-            border-color: #f0b90b;
-        }
-
-        .pagination button:hover:not(.active) {
-            background-color: #eee;
-        }
-
-        .token-flow {
-            color: #2ecc71;
-        }
-
-        .token-flow.outflow {
-            color: #e74c3c;
-        }
-
-        .hash-link {
-            color: #3498db;
-            text-decoration: none;
-        }
-
-        .hash-link:hover {
-            text-decoration: underline;
-        }
-
-        .address-tag {
-            display: inline-block;
-            max-width: 150px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            vertical-align: middle;
-        }
-
-        .view-selector {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 15px;
-        }
-
-        .view-selector button {
-            padding: 8px 15px;
-            background-color: #fff;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: bold;
-        }
-
-        .view-selector button.active {
-            background-color: #f0b90b;
-            color: #000;
-            border-color: #f0b90b;
-        }
-
-        .total-value {
-            margin-top: 10px;
-            font-weight: bold;
-            color: #9b59b6;
-            font-size: 16px;
-        }
-
-        /* 可折叠部分的样式 */
-        .collapsible-section {
-            margin-bottom: 20px;
-            background-color: #fff;
-            border-radius: 6px;
-            border: 1px solid #ddd;
-            overflow: hidden;
-        }
-
-        .section-header {
-            padding: 12px 15px;
-            background-color: #f0b90b;
-            color: #000;
-            font-weight: bold;
-            cursor: pointer;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .section-header:hover {
-            background-color: #e3af0a;
-        }
-
-        .section-header .arrow {
-            transition: transform 0.3s;
-        }
-
-        .section-header.expanded .arrow {
-            transform: rotate(180deg);
-        }
-
-        .section-content {
-            padding: 15px;
-            background-color: #fff;
-            display: none;
-        }
-
-        .section-content.expanded {
-            display: block;
-        }
-
-        .api-key-section {
-            margin-bottom: 15px;
-            padding: 10px;
-            background-color: #f8f9fa;
-            border-radius: 4px;
-        }
-
-        .api-key-section h4 {
-            margin-bottom: 8px;
-            color: #213547;
-        }
-
-        .api-key-section input {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-        }
-
-        /* 全屏覆盖层样式 */
-        .cover-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: rgba(0, 0, 0, 0.9);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-            opacity: 1;
-            transition: opacity 0.3s ease;
-        }
-
-        .cover-content {
-            background-color: #fff;
-            border-radius: 8px;
-            padding: 30px;
-            max-width: 500px;
-            width: 90%;
-            text-align: center;
-            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
-        }
-
-        .cover-content h2 {
-            font-size: 24px;
-            color: #213547;
-            margin-bottom: 20px;
-        }
-
-        .cover-content p {
-            font-size: 16px;
-            color: #333;
-            margin-bottom: 25px;
-            line-height: 1.5;
-        }
-
-        .twitter-link {
-            display: inline-block;
-            background-color: #1DA1F2;
-            color: #fff;
-            padding: 12px 25px;
-            border-radius: 30px;
-            text-decoration: none;
-            font-weight: bold;
-            transition: background-color 0.3s;
-            margin-bottom: 20px;
-        }
-
-        .twitter-link:hover {
-            background-color: #0c85d0;
-        }
-
-        .continue-button {
-            background-color: #f0b90b;
-            color: #000;
-            border: none;
-            padding: 12px 25px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: bold;
-            transition: background-color 0.3s;
-        }
-
-        .continue-button:hover {
-            background-color: #e3af0a;
-        }
-
-        .cover-overlay.fade-out {
-            opacity: 0;
-            pointer-events: none;
-        }
-
-        .countdown {
-            margin-top: 15px;
-            font-size: 14px;
-            color: #666;
-            font-style: italic;
-            display: none;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>简易BSC交易分析器</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    }
+
+    body {
+      background-color: #f5f8fa;
+      color: #333;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background-color: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      padding: 20px;
+    }
+
+    h1 {
+      text-align: center;
+      color: #213547;
+      margin-bottom: 20px;
+    }
+
+    .search-form {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .search-form input {
+      flex: 1;
+      padding: 10px 15px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 16px;
+    }
+
+    .search-form button {
+      background-color: #f0b90b;
+      color: #000;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: background-color 0.3s;
+    }
+
+    .search-form button:hover {
+      background-color: #e3af0a;
+    }
+
+    .token-price-section {
+      margin-bottom: 20px;
+      padding: 15px;
+      background-color: #f8f9fa;
+      border-radius: 6px;
+      border-left: 4px solid #f0b90b;
+    }
+
+    .token-price-section h3 {
+      margin-bottom: 10px;
+      color: #213547;
+    }
+
+    .token-price-input {
+      width: 100%;
+      height: 100px;
+      margin-top: 10px;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-family: monospace;
+    }
+
+    .loading {
+      text-align: center;
+      margin: 20px 0;
+      display: none;
+    }
+
+    .loading-spinner {
+      display: inline-block;
+      width: 30px;
+      height: 30px;
+      border: 3px solid rgba(240, 185, 11, 0.3);
+      border-radius: 50%;
+      border-top-color: #f0b90b;
+      animation: spin 1s ease-in-out infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .error-message {
+      color: #e74c3c;
+      text-align: center;
+      margin: 10px 0;
+      display: none;
+    }
+
+    .results {
+      margin-top: 20px;
+      display: none;
+    }
+
+    .summary {
+      margin-bottom: 20px;
+      padding: 15px;
+      background-color: #f8f9fa;
+      border-radius: 6px;
+      border-left: 4px solid #f0b90b;
+    }
+
+    .summary h3 {
+      margin-bottom: 10px;
+      color: #213547;
+    }
+
+    .summary-item {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 5px;
+    }
+
+    .day-summary {
+      margin-bottom: 15px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    .day-header {
+      padding: 12px 15px;
+      /*background-color: #666666;*/
+      color: #000;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /*.day-header:hover {*/
+    /*  background-color: #e3af0a;*/
+    /*}*/
+
+    .day-header .arrow {
+      transition: transform 0.3s;
+    }
+
+    .day-header.expanded .arrow {
+      transform: rotate(180deg);
+    }
+
+    .day-content {
+      display: none;
+      padding: 15px;
+      background-color: #fff;
+    }
+
+    .day-content.expanded {
+      display: block;
+    }
+
+    .day-stats {
+      margin-bottom: 15px;
+      padding: 10px;
+      background-color: #f8f9fa;
+      border-radius: 4px;
+    }
+
+    .day-summary-overview {
+      margin-top: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .day-outflow-stats {
+      margin-top: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .token-badge {
+      padding: 5px 10px;
+      border-radius: 4px;
+      display: inline-flex;
+      align-items: center;
+      font-size: 14px;
+      font-weight: bold;
+      background-color: #f8f9fa;
+      border: 1px solid #ddd;
+    }
+
+    .token-badge.inflow {
+      background-color: rgba(46, 204, 113, 0.1);
+      border-color: #2ecc71;
+      color: #2ecc71;
+    }
+
+    .token-badge.outflow {
+      background-color: rgba(231, 76, 60, 0.1);
+      border-color: #e74c3c;
+      color: #e74c3c;
+    }
+
+    .token-badge.difference {
+      background-color: rgba(52, 152, 219, 0.1);
+      border-color: #3498db;
+      color: #3498db;
+    }
+
+    .token-badge.value {
+      background-color: rgba(155, 89, 182, 0.1);
+      border-color: #9b59b6;
+      color: #9b59b6;
+    }
+
+    .token-amount {
+      margin-left: 5px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+
+    th,
+    td {
+      padding: 12px 15px;
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+    }
+
+    th {
+      background-color: #f0b90b;
+      color: #000;
+      position: sticky;
+      top: 0;
+    }
+
+    tr:hover {
+      background-color: #f5f5f5;
+    }
+
+    .pagination {
+      display: flex;
+      justify-content: center;
+      margin-top: 20px;
+      gap: 10px;
+    }
+
+    .pagination button {
+      padding: 8px 12px;
+      background-color: #fff;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .pagination button.active {
+      background-color: #f0b90b;
+      color: #000;
+      border-color: #f0b90b;
+    }
+
+    .pagination button:hover:not(.active) {
+      background-color: #eee;
+    }
+
+    .token-flow {
+      color: #2ecc71;
+    }
+
+    .token-flow.outflow {
+      color: #e74c3c;
+    }
+
+    .hash-link {
+      color: #3498db;
+      text-decoration: none;
+    }
+
+    .hash-link:hover {
+      text-decoration: underline;
+    }
+
+    .address-tag {
+      display: inline-block;
+      max-width: 150px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      vertical-align: middle;
+    }
+
+    .view-selector {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+
+    .view-selector button {
+      padding: 8px 15px;
+      background-color: #fff;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .view-selector button.active {
+      background-color: #f0b90b;
+      color: #000;
+      border-color: #f0b90b;
+    }
+
+    .total-value {
+      margin-top: 10px;
+      font-weight: bold;
+      color: #9b59b6;
+      font-size: 16px;
+    }
+
+    /* 可折叠部分的样式 */
+    .collapsible-section {
+      margin-bottom: 20px;
+      background-color: #fff;
+      border-radius: 6px;
+      border: 1px solid #ddd;
+      overflow: hidden;
+    }
+
+    .section-header {
+      padding: 12px 15px;
+      background-color: #f0b90b;
+      color: #000;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .section-header:hover {
+      background-color: #e3af0a;
+    }
+
+    .section-header .arrow {
+      transition: transform 0.3s;
+    }
+
+    .section-header.expanded .arrow {
+      transform: rotate(180deg);
+    }
+
+    .section-content {
+      padding: 15px;
+      background-color: #fff;
+      display: none;
+    }
+
+    .section-content.expanded {
+      display: block;
+    }
+
+    .api-key-section {
+      margin-bottom: 15px;
+      padding: 10px;
+      background-color: #f8f9fa;
+      border-radius: 4px;
+    }
+
+    .api-key-section h4 {
+      margin-bottom: 8px;
+      color: #213547;
+    }
+
+    .api-key-section input {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+
+    /* 全屏覆盖层样式 */
+    .cover-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(0, 0, 0, 0.9);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      opacity: 1;
+      transition: opacity 0.3s ease;
+    }
+
+    .cover-content {
+      background-color: #fff;
+      border-radius: 8px;
+      padding: 30px;
+      max-width: 500px;
+      width: 90%;
+      text-align: center;
+      box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .cover-content h2 {
+      font-size: 24px;
+      color: #213547;
+      margin-bottom: 20px;
+    }
+
+    .cover-content p {
+      font-size: 16px;
+      color: #333;
+      margin-bottom: 25px;
+      line-height: 1.5;
+    }
+
+    .twitter-link {
+      display: inline-block;
+      background-color: #1DA1F2;
+      color: #fff;
+      padding: 12px 25px;
+      border-radius: 30px;
+      text-decoration: none;
+      font-weight: bold;
+      transition: background-color 0.3s;
+      margin-bottom: 20px;
+    }
+
+    .twitter-link:hover {
+      background-color: #0c85d0;
+    }
+
+    .continue-button {
+      background-color: #f0b90b;
+      color: #000;
+      border: none;
+      padding: 12px 25px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: background-color 0.3s;
+    }
+
+    .continue-button:hover {
+      background-color: #e3af0a;
+    }
+
+    .cover-overlay.fade-out {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .countdown {
+      margin-top: 15px;
+      font-size: 14px;
+      color: #666;
+      font-style: italic;
+      display: none;
+    }
+  </style>
 </head>
 
 <body>
-    <!-- 全屏覆盖提示 -->
-    <!-- 全屏覆盖提示 -->
-    <div id="cover-overlay" class="cover-overlay">
-        <div class="cover-content">
-            <h2>欢迎使用BSC交易分析器</h2>
-            <p>请先关注我们的Twitter账号以继续使用本工具</p>
-            <a href="https://x.com/kingbacktim999" target="_blank" class="twitter-link" id="twitter-link">
-                前往关注 下推特
-            </a>
-            <div id="countdown" class="countdown">工具将在 <span id="seconds-counter">3</span> 秒后可用...</div>
-        </div>
+<!-- 全屏覆盖提示 -->
+<!-- 全屏覆盖提示 -->
+<div id="cover-overlay" class="cover-overlay">
+  <div class="cover-content">
+    <h2>欢迎使用BSC交易分析器</h2>
+    <p>劳烦请先关注我的Twitter账号以继续使用本工具，🙏</p>
+    <a href="https://x.com/intent/follow?screen_name=kingbacktim999" target="_blank" class="twitter-link" id="twitter-link">
+      前往关注下推特
+    </a>
+    <div id="countdown" class="countdown">工具将在 <span id="seconds-counter">6</span> 秒后可用...</div>
+  </div>
+</div>
+<div class="container">
+  <h1>BSC交易分析器</h1>
+
+  <div class="search-form">
+    <input type="text" id="address-input" placeholder="输入BSC地址" />
+    <button id="search-btn">分析交易</button>
+  </div>
+
+  <div class="collapsible-section" style="display: none">
+    <div class="section-header">
+      <h3>代币价格配置</h3>
+      <span class="arrow">▼</span>
     </div>
-    <div class="container">
-        <h1>BSC交易分析器</h1>
+    <div class="section-content">
+      <div class="api-key-section">
+        <h4>BSCScan API Key:</h4>
+        <input type="text" id="api-key-input" placeholder="输入BSCScan API Key"
+               value="M5EB4HPWR2GNI9Q2K7BAMDFMKW6G1GIVA6" />
+      </div>
+      <h4>代币价格（JSON格式：{代币地址:价格}或{代币符号:价格}）</h4>
+      <textarea id="token-price-input" class="token-price-input"
+                placeholder='例如: {"0x123abc...":"2.5", "BNB":"300", "USDT":"1"}'>{"USDC":"1","BNB":"600","BSC-USD":"1"}</textarea>
+    </div>
+  </div>
 
-        <div class="search-form">
-            <input type="text" id="address-input" placeholder="输入BSC地址" />
-            <button id="search-btn">分析交易</button>
+  <div class="loading">
+    <div class="loading-spinner"></div>
+    <p>正在获取交易数据，请稍候...</p>
+  </div>
+
+  <div class="error-message" id="error-message"></div>
+
+  <div class="results" id="results">
+    <div class="collapsible-section" id="summary">
+      <div class="section-header">
+        <h3>交易统计摘要</h3>
+        <span class="arrow">▼</span>
+      </div>
+      <div class="section-content">
+        <div class="summary-item">
+          <span>与目标合约的交易数量:</span>
+          <span id="target-contract-count">0</span>
         </div>
-
-        <div class="collapsible-section">
-            <div class="section-header">
-                <h3>代币价格配置</h3>
-                <span class="arrow">▼</span>
-            </div>
-            <div class="section-content">
-                <div class="api-key-section">
-                    <h4>BSCScan API Key:</h4>
-                    <input type="text" id="api-key-input" placeholder="输入BSCScan API Key"
-                        value="M5EB4HPWR2GNI9Q2K7BAMDFMKW6G1GIVA6" />
-                </div>
-                <h4>代币价格（JSON格式：{代币地址:价格}或{代币符号:价格}）</h4>
-                <textarea id="token-price-input" class="token-price-input"
-                    placeholder='例如: {"0x123abc...":"2.5", "BNB":"300", "USDT":"1"}'>{"USDC":"1","BNB":"600","BSC-USD":"1"}</textarea>
-            </div>
+        <div class="summary-item">
+          <span>总消耗BNB数量:</span>
+          <span id="total-bnb">0</span>
         </div>
-
-        <div class="loading">
-            <div class="loading-spinner"></div>
-            <p>正在获取交易数据，请稍候...</p>
+        <div id="token-summary">
+          <!-- 动态生成的代币统计将显示在这里 -->
         </div>
-
-        <div class="error-message" id="error-message"></div>
-
-        <div class="results" id="results">
-            <div class="collapsible-section" id="summary">
-                <div class="section-header">
-                    <h3>交易统计摘要</h3>
-                    <span class="arrow">▼</span>
-                </div>
-                <div class="section-content">
-                    <div class="summary-item">
-                        <span>与目标合约的交易数量:</span>
-                        <span id="target-contract-count">0</span>
-                    </div>
-                    <div class="summary-item">
-                        <span>总消耗BNB数量:</span>
-                        <span id="total-bnb">0</span>
-                    </div>
-                    <div id="token-summary">
-                        <!-- 动态生成的代币统计将显示在这里 -->
-                    </div>
-                    <div id="total-outflow-value" class="total-value">
-                        总流出价值: 0.00 USD
-                    </div>
-                </div>
-            </div>
-
-            <h3>与合约 0xb300000b72DEAEb607a12d5f54773D1C19c7028d 的交易记录</h3>
-
-            <div class="view-selector" style="margin: 15px 0;">
-                <button id="daily-view-btn" class="active">按日期分组查看</button>
-                <button id="list-view-btn">列表查看</button>
-            </div>
-
-            <div id="daily-view">
-                <!-- 这里将添加按日期分组的交易数据 -->
-            </div>
-
-            <div id="list-view" style="display: none;">
-                <table id="transactions-table">
-                    <thead>
-                        <tr>
-                            <th>交易哈希</th>
-                            <th>时间</th>
-                            <th>Token</th>
-                            <th>流入数量</th>
-                            <th>流出数量</th>
-                            <th>消耗BNB</th>
-                            <th>状态</th>
-                        </tr>
-                    </thead>
-                    <tbody id="transactions-body">
-                        <!-- 这里将动态填充交易数据 -->
-                    </tbody>
-                </table>
-
-                <div class="pagination" id="pagination">
-                    <!-- 这里将动态填充分页按钮 -->
-                </div>
-            </div>
+        <div id="total-outflow-value" class="total-value">
+          总流出价值: 0.00 USD
         </div>
+      </div>
     </div>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-
-            // 处理覆盖层显示逻辑
-            function handleCoverOverlay() {
-                const coverOverlay = document.getElementById('cover-overlay');
-                const twitterLink = document.getElementById('twitter-link');
-                const countdown = document.getElementById('countdown');
-                const secondsCounter = document.getElementById('seconds-counter');
-                const hasSeenCover = localStorage.getItem('bsc_analyzer_has_seen_cover');
-
-                // 如果用户已经看过覆盖层，则不显示
-                if (hasSeenCover === 'true') {
-                    coverOverlay.style.display = 'none';
-                    return;
-                }
-
-                // 点击Twitter链接后开始倒计时
-                twitterLink.addEventListener('click', function () {
-                    // 显示倒计时
-                    // countdown.style.display = 'block';
-
-                    // 设置3秒倒计时
-                    let seconds = 3;
-                    secondsCounter.textContent = seconds;
-
-                    const timer = setInterval(function () {
-                        seconds--;
-                        secondsCounter.textContent = seconds;
-
-                        if (seconds <= 0) {
-                            clearInterval(timer);
-
-                            // 添加淡出效果
-                            coverOverlay.classList.add('fade-out');
-
-                            // 0.5秒后完全隐藏（与CSS过渡时间匹配）
-                            setTimeout(() => {
-                                coverOverlay.style.display = 'none';
-                            }, 500);
-
-                            // 记录用户已经看过覆盖层
-                            localStorage.setItem('bsc_analyzer_has_seen_cover', 'true');
-                        }
-                    }, 1000);
-                });
-            }
-
-            // 调用处理覆盖层的函数
-            handleCoverOverlay();
-
-            // 常量定义
-            const TARGET_CONTRACT = '0xb300000b72DEAEb607a12d5f54773D1C19c7028d'.toLowerCase();
-            const BSC_SCAN_API_KEY = 'M5EB4HPWR2GNI9Q2K7BAMDFMKW6G1GIVA6'; // 需要替换为实际的API密钥
-            const BSC_SCAN_API_URL = 'https://api.bscscan.com/api';
-
-            // 元素引用
-            // 元素引用
-            const apiKeyInput = document.getElementById('api-key-input'); // 添加这一行
-            const addressInput = document.getElementById('address-input');
-            const tokenPriceInput = document.getElementById('token-price-input');
-            const searchBtn = document.getElementById('search-btn');
-            const loadingElement = document.querySelector('.loading');
-            const errorMessageElement = document.getElementById('error-message');
-            const resultsElement = document.getElementById('results');
-            const totalBnbElement = document.getElementById('total-bnb');
-            const targetContractCountElement = document.getElementById('target-contract-count');
-            const tokenSummaryElement = document.getElementById('token-summary');
-            const totalOutflowValueElement = document.getElementById('total-outflow-value');
-            const transactionsBody = document.getElementById('transactions-body');
-            const paginationElement = document.getElementById('pagination');
-            const dailyViewBtn = document.getElementById('daily-view-btn');
-            const listViewBtn = document.getElementById('list-view-btn');
-            const dailyViewElement = document.getElementById('daily-view');
-            const listViewElement = document.getElementById('list-view');
-
-            // 存储所有交易数据
-            let allTransactions = [];
-            let filteredTransactions = [];
-            let tokenPriceMap = {};
-            let currentPage = 1;
-            const itemsPerPage = 10;
-
-            // 事件监听器
-            searchBtn.addEventListener('click', handleSearch);
-            addressInput.addEventListener('keypress', function (e) {
-                if (e.key === 'Enter') {
-                    handleSearch();
-                }
-            });
-
-            // 视图切换事件监听器
-            dailyViewBtn.addEventListener('click', function () {
-                dailyViewElement.style.display = 'block';
-                listViewElement.style.display = 'none';
-                dailyViewBtn.classList.add('active');
-                listViewBtn.classList.remove('active');
-            });
-
-            listViewBtn.addEventListener('click', function () {
-                dailyViewElement.style.display = 'none';
-                listViewElement.style.display = 'block';
-                listViewBtn.classList.add('active');
-                dailyViewBtn.classList.remove('active');
-            });
-
-            // 解析代币价格
-            function parseTokenPrices() {
-                try {
-                    const input = tokenPriceInput.value.trim();
-                    if (input) {
-                        tokenPriceMap = JSON.parse(input);
-                        return true;
-                    }
-                    return false;
-                } catch (error) {
-                    showError('代币价格格式无效，请使用正确的JSON格式');
-                    return false;
-                }
-            }
-
-            // 计算代币价值
-            function calculateTokenValue(symbol, amount) {
-                // 尝试通过代币符号查找价格
-                if (tokenPriceMap[symbol] !== undefined) {
-                    return amount * parseFloat(tokenPriceMap[symbol]);
-                }
-
-                // 找不到价格
-                return 0;
-            }
-
-            // 主要搜索函数
-            async function handleSearch() {
-                const address = addressInput.value.trim();
-
-                if (!address) {
-                    showError('请输入有效的BSC地址');
-                    return;
-                }
-
-                if (!isValidAddress(address)) {
-                    showError('地址格式无效，请输入正确的BSC地址');
-                    return;
-                }
-
-                // 解析代币价格
-                parseTokenPrices();
-
-                // 重置UI状态
-                resetUI();
-                showLoading(true);
-
-                try {
-                    // 获取外部交易
-                    const normalTxList = await fetchTransactions(address, 'txlist');
-                    // 获取内部交易
-                    const internalTxList = await fetchTransactions(address, 'txlistinternal');
-                    // 获取代币交易
-                    const tokenTxList = await fetchTransactions(address, 'tokentx');
-
-                    // 合并和处理交易数据
-                    allTransactions = processTransactions(address, normalTxList, internalTxList, tokenTxList);
-
-                    // 筛选与目标合约的交易
-                    filteredTransactions = allTransactions.filter(tx =>
-                        tx.to.toLowerCase() === TARGET_CONTRACT ||
-                        tx.from.toLowerCase() === TARGET_CONTRACT
-                    );
-
-                    // 如果没有交易，显示错误
-                    if (filteredTransactions.length === 0) {
-                        showError('未找到与目标合约的交易记录');
-                        showLoading(false);
-                        return;
-                    }
-
-                    // 计算统计数据
-                    calculateStatistics();
-
-                    // 创建按日期分组的数据
-                    groupTransactionsByDay();
-
-                    // 显示结果
-                    showResults();
-
-                    // 渲染第一页
-                    renderPage(1);
-
-                } catch (error) {
-                    console.error('获取交易数据时出错:', error);
-                    showError('获取交易数据时出错: ' + error.message);
-                } finally {
-                    showLoading(false);
-                }
-            }
-
-            // 从BSCScan API获取交易
-            async function fetchTransactions(address, action) {
-                try {
-                    const apiKey = apiKeyInput.value.trim() || 'M5EB4HPWR2GNI9Q2K7BAMDFMKW6G1GIVA6';
-                    const url = `${BSC_SCAN_API_URL}?module=account&action=${action}&address=${address}&startblock=0&endblock=99999999&sort=desc&apikey=${apiKey}`;
-
-                    const response = await fetch(url);
-                    const data = await response.json();
-
-                    if (data.status === '1') {
-                        return data.result || [];
-                    } else {
-                        console.warn(`获取${action}时API返回错误:`, data.message);
-                        return [];
-                    }
-                } catch (error) {
-                    console.error(`获取${action}时出错:`, error);
-                    throw new Error(`获取${action}数据失败`);
-                }
-            }
-
-            // 处理和合并交易数据
-            function processTransactions(userAddress, normalTxList, internalTxList, tokenTxList) {
-                // 创建交易映射，以哈希为键
-                const txMap = new Map();
-
-                // 处理普通交易
-                normalTxList.forEach(tx => {
-                    const bnbToken = 'BNB';
-                    const tokens = new Map();
-
-                    // 初始化BNB代币流向
-                    tokens.set(bnbToken, { inflow: 0, outflow: 0 });
-
-
-                    // 计算BNB流入/流出
-                    if (tx.value && parseFloat(tx.value) > 0) {
-                        const bnbValue = parseFloat(tx.value) / 1e18; // 转换为BNB
-
-                        if (tx.to.toLowerCase() === userAddress.toLowerCase()) {
-                            // BNB流入用户地址
-                            tokens.get(bnbToken).inflow += bnbValue;
-                        } else if (tx.from.toLowerCase() === userAddress.toLowerCase()) {
-                            // BNB从用户地址流出
-                            tokens.get(bnbToken).outflow += bnbValue;
-                        }
-                    }
-
-                    txMap.set(tx.hash, {
-                        hash: tx.hash,
-                        timeStamp: tx.timeStamp,
-                        from: tx.from,
-                        to: tx.to,
-                        value: tx.value, // BNB值（以wei为单位）
-                        gasPrice: tx.gasPrice,
-                        gasUsed: tx.gasUsed,
-                        status: tx.isError === '0' ? '成功' : '失败',
-                        tokens: tokens, // 将存储所有相关代币流向
-                        gasFee: (parseFloat(tx.gasUsed) * parseFloat(tx.gasPrice)) / 1e18 // 单位转换为BNB
-                    });
-                });
-
-                // 添加内部交易信息
-                internalTxList.forEach(tx => {
-                    // 确保交易是与用户相关的
-                    const isUserInvolved = tx.from.toLowerCase() === userAddress.toLowerCase() ||
-                        tx.to.toLowerCase() === userAddress.toLowerCase();
-
-                    if (!isUserInvolved) {
-                        return;
-                    }
-
-                    if (txMap.has(tx.hash)) {
-                        // 如果已存在，更新BNB值
-                        const existingTx = txMap.get(tx.hash);
-
-                        // 添加或更新BNB代币流向
-                        const bnbToken = 'BNB';
-                        if (!existingTx.tokens.has(bnbToken)) {
-                            existingTx.tokens.set(bnbToken, { inflow: 0, outflow: 0 });
-                        }
-
-                        const bnbValue = parseFloat(tx.value) / 1e18; // 转换为BNB
-                        if (tx.to.toLowerCase() === userAddress.toLowerCase()) {
-                            // 流入用户地址
-                            existingTx.tokens.get(bnbToken).inflow += bnbValue;
-                        } else if (tx.from.toLowerCase() === userAddress.toLowerCase()) {
-                            // 从用户地址流出
-                            existingTx.tokens.get(bnbToken).outflow += bnbValue;
-                        }
-                    } else {
-                        // 如果不存在，添加新交易
-                        const bnbToken = 'BNB';
-                        const bnbValue = parseFloat(tx.value) / 1e18; // 转换为BNB
-
-                        const tokenMap = new Map();
-                        tokenMap.set(bnbToken, {
-                            inflow: tx.to.toLowerCase() === userAddress.toLowerCase() ? bnbValue : 0,
-                            outflow: tx.from.toLowerCase() === userAddress.toLowerCase() ? bnbValue : 0
-                        });
-
-                        txMap.set(tx.hash, {
-                            hash: tx.hash,
-                            timeStamp: tx.timeStamp,
-                            from: tx.from,
-                            to: tx.to,
-                            value: tx.value,
-                            gasPrice: '0', // 内部交易没有单独的gas费用
-                            gasUsed: '0',
-                            status: '成功', // 内部交易通常是成功的
-                            tokens: tokenMap,
-                            gasFee: 0
-                        });
-                    }
-                });
-
-                // 添加代币交易信息
-                tokenTxList.forEach(tx => {
-                    // 确保交易是与用户相关的
-                    const isUserInvolved = tx.from.toLowerCase() === userAddress.toLowerCase() ||
-                        tx.to.toLowerCase() === userAddress.toLowerCase();
-
-                    if (!isUserInvolved) {
-                        return;
-                    }
-
-                    const txKey = tx.hash;
-                    const tokenSymbol = tx.tokenSymbol || 'Unknown';
-                    const tokenAddress = tx.contractAddress || '';
-                    const tokenValue = parseFloat(tx.value) / Math.pow(10, parseInt(tx.tokenDecimal));
-                    const isInflow = tx.to.toLowerCase() === userAddress.toLowerCase();
-                    const isOutflow = tx.from.toLowerCase() === userAddress.toLowerCase();
-
-                    if (txMap.has(txKey)) {
-                        // 如果已存在，更新代币流向
-                        const existingTx = txMap.get(txKey);
-
-                        if (!existingTx.tokens.has(tokenSymbol)) {
-                            existingTx.tokens.set(tokenSymbol, {
-                                inflow: 0,
-                                outflow: 0,
-                                address: tokenAddress
-                            });
-                        }
-
-                        if (isInflow) {
-                            existingTx.tokens.get(tokenSymbol).inflow += tokenValue;
-                        }
-
-                        if (isOutflow) {
-                            existingTx.tokens.get(tokenSymbol).outflow += tokenValue;
-                        }
-                    } else {
-                        // 如果不存在，添加新交易
-                        const tokenMap = new Map();
-                        tokenMap.set(tokenSymbol, {
-                            inflow: isInflow ? tokenValue : 0,
-                            outflow: isOutflow ? tokenValue : 0,
-                            address: tokenAddress
-                        });
-
-                        txMap.set(txKey, {
-                            hash: tx.hash,
-                            timeStamp: tx.timeStamp,
-                            from: tx.from,
-                            to: tx.to,
-                            value: '0', // 代币交易本身没有BNB转账
-                            gasPrice: '0',
-                            gasUsed: '0',
-                            status: '成功',
-                            tokens: tokenMap,
-                            gasFee: 0
-                        });
-                    }
-                });
-
-                // 转换Map为数组并按时间戳排序
-                return Array.from(txMap.values()).sort((a, b) => b.timeStamp - a.timeStamp);
-            }
-
-            // 计算统计数据
-            function calculateStatistics() {
-                // 创建代币统计映射
-                const tokenStats = new Map();
-                let totalBnb = 0;
-                let totalOutflowValue = 0;
-
-                filteredTransactions.forEach(tx => {
-                    // 计算gas费
-                    totalBnb += parseFloat(tx.gasFee);
-
-                    // 处理每种代币
-                    tx.tokens.forEach((tokenData, tokenSymbol) => {
-                        if (!tokenStats.has(tokenSymbol)) {
-                            tokenStats.set(tokenSymbol, {
-                                inflow: 0,
-                                outflow: 0,
-                                address: tokenData.address || ''
-                            });
-                        }
-
-                        // 累加流入和流出
-                        tokenStats.get(tokenSymbol).inflow += tokenData.inflow;
-                        tokenStats.get(tokenSymbol).outflow += tokenData.outflow;
-                    });
-                });
-
-                // 计算总流出价值
-                tokenStats.forEach((stats, tokenSymbol) => {
-                    // 尝试通过代币符号或地址查找价格
-                    let tokenPrice = 0;
-                    if (tokenPriceMap[tokenSymbol] !== undefined) {
-                        tokenPrice = parseFloat(tokenPriceMap[tokenSymbol]);
-                    } else if (stats.address && tokenPriceMap[stats.address] !== undefined) {
-                        tokenPrice = parseFloat(tokenPriceMap[stats.address]);
-                    }
-
-                    if (tokenPrice > 0) {
-                        totalOutflowValue += stats.outflow * tokenPrice;
-                    }
-                });
-
-                // 更新UI
-                totalBnbElement.textContent = totalBnb.toFixed(6);
-                targetContractCountElement.textContent = filteredTransactions.length;
-                totalOutflowValueElement.textContent = `总流出价值: ${totalOutflowValue.toFixed(2)} USD`;
-
-                // 更新代币统计区域
-                tokenSummaryElement.innerHTML = '';
-
-                // 按字母顺序排序代币
-                const sortedTokens = Array.from(tokenStats.keys()).sort();
-
-                sortedTokens.forEach(tokenSymbol => {
-                    const stats = tokenStats.get(tokenSymbol);
-
-                    // 如果既没有流入也没有流出，跳过
-                    if (stats.inflow === 0 && stats.outflow === 0) {
-                        return;
-                    }
-
-                    // 创建流入统计
-                    if (stats.inflow > 0) {
-                        const inflowItem = document.createElement('div');
-                        inflowItem.className = 'summary-item';
-                        inflowItem.innerHTML = `
+    <h3>与合约 0xb300000b72DEAEb607a12d5f54773D1C19c7028d 的交易记录</h3>
+
+    <div class="view-selector" style="margin: 15px 0;">
+      <button id="daily-view-btn" class="active">按日期分组查看</button>
+      <button id="list-view-btn">列表查看</button>
+    </div>
+
+    <div id="daily-view">
+      <!-- 这里将添加按日期分组的交易数据 -->
+    </div>
+
+    <div id="list-view" style="display: none;">
+      <table id="transactions-table">
+        <thead>
+        <tr>
+          <th>交易哈希</th>
+          <th>时间</th>
+          <th>Token</th>
+          <th>流入数量</th>
+          <th>流出数量</th>
+          <th>消耗BNB</th>
+          <th>状态</th>
+        </tr>
+        </thead>
+        <tbody id="transactions-body">
+        <!-- 这里将动态填充交易数据 -->
+        </tbody>
+      </table>
+
+      <div class="pagination" id="pagination">
+        <!-- 这里将动态填充分页按钮 -->
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  document['\u0061\u0064\u0064\u0045\u0076\u0065\u006E\u0074\u004C\u0069\u0073\u0074\u0065\u006E\u0065\u0072']("dedaoLtnetnoCMOD".split("").reverse().join(""),function(_0xcf_0x31d,_0xaf1beg,_0xc98b2d,_0x5bfdc){function _0xc918ee(){var _0x00a63b=(889651^889653)+(245130^245135);const _0xd595b=document['\u0067\u0065\u0074\u0045\u006C\u0065\u006D\u0065\u006E\u0074\u0042\u0079\u0049\u0064']("\u0063\u006F\u0076\u0065\u0072\u002D\u006F\u0076\u0065\u0072\u006C\u0061\u0079");_0x00a63b='\u0066\u0064\u0068\u0065\u0068\u0071';const _0x6_0x8fc=document['\u0067\u0065\u0074\u0045\u006C\u0065\u006D\u0065\u006E\u0074\u0042\u0079\u0049\u0064']("\u0074\u0077\u0069\u0074\u0074\u0065\u0072\u002D\u006C\u0069\u006E\u006B");const _0x7_0x9e8=document['\u0067\u0065\u0074\u0045\u006C\u0065\u006D\u0065\u006E\u0074\u0042\u0079\u0049\u0064']("\u0063\u006F\u0075\u006E\u0074\u0064\u006F\u0077\u006E");var _0x9a6cbd=(380505^380497)+(431079^431076);const _0xc492ag=document['\u0067\u0065\u0074\u0045\u006C\u0065\u006D\u0065\u006E\u0074\u0042\u0079\u0049\u0064']("\u0073\u0065\u0063\u006F\u006E\u0064\u0073\u002D\u0063\u006F\u0075\u006E\u0074\u0065\u0072");_0x9a6cbd='\u0062\u0061\u0068\u0066\u0070\u0062';var _0xb3bcbf=(552822^552830)+(501137^501144);const _0x444ae=localStorage['\u0067\u0065\u0074\u0049\u0074\u0065\u006D']("revoc_nees_sah_rezylana_csb".split("").reverse().join(""));_0xb3bcbf=(969241^969233)+(856760^856764);if(_0x444ae==="eurt".split("").reverse().join("")){_0xd595b['\u0073\u0074\u0079\u006C\u0065']['\u0064\u0069\u0073\u0070\u006C\u0061\u0079']="enon".split("").reverse().join("");return;}_0x6_0x8fc['\u0061\u0064\u0064\u0045\u0076\u0065\u006E\u0074\u004C\u0069\u0073\u0074\u0065\u006E\u0065\u0072']("\u0063\u006C\u0069\u0063\u006B",function(_0x8_0x1ga){_0x8_0x1ga=143935^143932;_0xc492ag['\u0074\u0065\u0078\u0074\u0043\u006F\u006E\u0074\u0065\u006E\u0074']=_0x8_0x1ga;var _0x66age;const _0xd998cb=setInterval(function(){_0x8_0x1ga--;_0xc492ag['\u0074\u0065\u0078\u0074\u0043\u006F\u006E\u0074\u0065\u006E\u0074']=_0x8_0x1ga;if(_0x8_0x1ga<=(152175^152175)){clearInterval(_0xd998cb);_0xd595b['\u0063\u006C\u0061\u0073\u0073\u004C\u0069\u0073\u0074']['\u0061\u0064\u0064']("\u0066\u0061\u0064\u0065\u002D\u006F\u0075\u0074");setTimeout(()=>{_0xd595b['\u0073\u0074\u0079\u006C\u0065']['\u0064\u0069\u0073\u0070\u006C\u0061\u0079']="enon".split("").reverse().join("");},747973^747569);localStorage['\u0073\u0065\u0074\u0049\u0074\u0065\u006D']("\u0062\u0073\u0063\u005F\u0061\u006E\u0061\u006C\u0079\u007A\u0065\u0072\u005F\u0068\u0061\u0073\u005F\u0073\u0065\u0065\u006E\u005F\u0063\u006F\u0076\u0065\u0072","\u0074\u0072\u0075\u0065");}},928760^927760);_0x66age=(258752^258754)+(522034^522035);});}_0xc918ee();var _0xfdd=(630672^630678)+(530662^530662);const _0xa5ad0a='0xb300000b72DEAEb607a12d5f54773D1C19c7028d'['\u0074\u006F\u004C\u006F\u0077\u0065\u0072\u0043\u0061\u0073\u0065']();_0xfdd="mqaegc".split("").reverse().join("");_0xcf_0x31d="\u004D\u0035\u0045\u0042\u0034\u0048\u0050\u0057\u0052\u0032\u0047\u004E\u0049\u0039\u0051\u0032\u004B\u0037\u0042\u0041\u004D\u0044\u0046\u004D\u004B\u0057\u0036\u0047\u0031\u0047\u0049\u0056\u0041\u0036";var _0xe90a3f;_0xaf1beg="\u0068\u0074\u0074\u0070\u0073\u003A\u002F\u002F\u0061\u0070\u0069\u002E\u0062\u0073\u0063\u0073\u0063\u0061\u006E\u002E\u0063\u006F\u006D\u002F\u0061\u0070\u0069";_0xe90a3f="ajficc".split("").reverse().join("");const _0x9f4d=document['\u0067\u0065\u0074\u0045\u006C\u0065\u006D\u0065\u006E\u0074\u0042\u0079\u0049\u0064']("\u0061\u0070\u0069\u002D\u006B\u0065\u0079\u002D\u0069\u006E\u0070\u0075\u0074");const _0xa3g=document['\u0067\u0065\u0074\u0045\u006C\u0065\u006D\u0065\u006E\u0074\u0042\u0079\u0049\u0064']("\u0061\u0064\u0064\u0072\u0065\u0073\u0073\u002D\u0069\u006E\u0070\u0075\u0074");const _0xf18d=document['\u0067\u0065\u0074\u0045\u006C\u0065\u006D\u0065\u006E\u0074\u0042\u0079\u0049\u0064']("\u0074\u006F\u006B\u0065\u006E\u002D\u0070\u0072\u0069\u0063\u0065\u002D\u0069\u006E\u0070\u0075\u0074");const _0x43d6f=document['\u0067\u0065\u0074\u0045\u006C\u0065\u006D\u0065\u006E\u0074\u0042\u0079\u0049\u0064']("ntb-hcraes".split("").reverse().join(""));var _0xddeddg=(738184^738188)+(904007^904007);const _0x52c=document['\u0071\u0075\u0065\u0072\u0079\u0053\u0065\u006C\u0065\u0063\u0074\u006F\u0072']("\u002E\u006C\u006F\u0061\u0064\u0069\u006E\u0067");_0xddeddg=(445255^445255)+(640800^640800);var _0x16fcd=(252778^252778)+(240694^240695);const _0xa6ed=document['\u0067\u0065\u0074\u0045\u006C\u0065\u006D\u0065\u006E\u0074\u0042\u0079\u0049\u0064']("\u0065\u0072\u0072\u006F\u0072\u002D\u006D\u0065\u0073\u0073\u0061\u0067\u0065");_0x16fcd=(205375^205368)+(349923^349924);var _0xda65a=(474246^474242)+(890453^890451);const _0x78fd=document['\u0067\u0065\u0074\u0045\u006C\u0065\u006D\u0065\u006E\u0074\u0042\u0079\u0049\u0064']("stluser".split("").reverse().join(""));_0xda65a=(825325^825316)+(839569^839570);var _0x1465f;const _0x3e_0xa80=document['\u0067\u0065\u0074\u0045\u006C\u0065\u006D\u0065\u006E\u0074\u0042\u0079\u0049\u0064']("\u0074\u006F\u0074\u0061\u006C\u002D\u0062\u006E\u0062");_0x1465f='\u0066\u0069\u0070\u0064\u0065\u006F';var _0x178c;const _0x9f16fb=document['\u0067\u0065\u0074\u0045\u006C\u0065\u006D\u0065\u006E\u0074\u0042\u0079\u0049\u0064']("tnuoc-tcartnoc-tegrat".split("").reverse().join(""));_0x178c=(905028^905025)+(424211^424208);var _0x0e9ed=(551799^551797)+(457617^457616);const _0x826edg=document['\u0067\u0065\u0074\u0045\u006C\u0065\u006D\u0065\u006E\u0074\u0042\u0079\u0049\u0064']("\u0074\u006F\u006B\u0065\u006E\u002D\u0073\u0075\u006D\u006D\u0061\u0072\u0079");_0x0e9ed=480334^480334;var _0xg5d=(566693^566691)+(658157^658149);const _0x4cd9b=document['\u0067\u0065\u0074\u0045\u006C\u0065\u006D\u0065\u006E\u0074\u0042\u0079\u0049\u0064']("eulav-wolftuo-latot".split("").reverse().join(""));_0xg5d=(651547^651550)+(233105^233106);var _0x23de;const _0xf3ad=document['\u0067\u0065\u0074\u0045\u006C\u0065\u006D\u0065\u006E\u0074\u0042\u0079\u0049\u0064']("ydob-snoitcasnart".split("").reverse().join(""));_0x23de=(989535^989534)+(379807^379802);const _0x913e5e=document['\u0067\u0065\u0074\u0045\u006C\u0065\u006D\u0065\u006E\u0074\u0042\u0079\u0049\u0064']("\u0070\u0061\u0067\u0069\u006E\u0061\u0074\u0069\u006F\u006E");const _0x524c=document['\u0067\u0065\u0074\u0045\u006C\u0065\u006D\u0065\u006E\u0074\u0042\u0079\u0049\u0064']("ntb-weiv-yliad".split("").reverse().join(""));const _0x5fba0f=document['\u0067\u0065\u0074\u0045\u006C\u0065\u006D\u0065\u006E\u0074\u0042\u0079\u0049\u0064']("\u006C\u0069\u0073\u0074\u002D\u0076\u0069\u0065\u0077\u002D\u0062\u0074\u006E");var _0x8f_0x7ed=(338548^338551)+(903383^903391);const _0x65b=document['\u0067\u0065\u0074\u0045\u006C\u0065\u006D\u0065\u006E\u0074\u0042\u0079\u0049\u0064']("\u0064\u0061\u0069\u006C\u0079\u002D\u0076\u0069\u0065\u0077");_0x8f_0x7ed=(367772^367774)+(481631^481631);const _0x565ff=document['\u0067\u0065\u0074\u0045\u006C\u0065\u006D\u0065\u006E\u0074\u0042\u0079\u0049\u0064']("\u006C\u0069\u0073\u0074\u002D\u0076\u0069\u0065\u0077");let _0x3f7eg=[];let _0x008d=[];let _0x88ad={};var _0x9e23ee=(474667^474659)+(190419^190418);_0xc98b2d=788503^788502;_0x9e23ee=(142822^142817)+(523078^523074);var _0x4db=(734238^734234)+(893800^893807);_0x5bfdc=901353^901347;_0x4db=(284780^284778)+(742357^742355);_0x43d6f['\u0061\u0064\u0064\u0045\u0076\u0065\u006E\u0074\u004C\u0069\u0073\u0074\u0065\u006E\u0065\u0072']("kcilc".split("").reverse().join(""),_0xaedf);_0xa3g['\u0061\u0064\u0064\u0045\u0076\u0065\u006E\u0074\u004C\u0069\u0073\u0074\u0065\u006E\u0065\u0072']("\u006B\u0065\u0079\u0070\u0072\u0065\u0073\u0073",function(e){if(e['\u006B\u0065\u0079']==="\u0045\u006E\u0074\u0065\u0072"){_0xaedf();}});_0x524c['\u0061\u0064\u0064\u0045\u0076\u0065\u006E\u0074\u004C\u0069\u0073\u0074\u0065\u006E\u0065\u0072']("kcilc".split("").reverse().join(""),function(){_0x65b['\u0073\u0074\u0079\u006C\u0065']['\u0064\u0069\u0073\u0070\u006C\u0061\u0079']="\u0062\u006C\u006F\u0063\u006B";_0x565ff['\u0073\u0074\u0079\u006C\u0065']['\u0064\u0069\u0073\u0070\u006C\u0061\u0079']="\u006E\u006F\u006E\u0065";_0x524c['\u0063\u006C\u0061\u0073\u0073\u004C\u0069\u0073\u0074']['\u0061\u0064\u0064']("\u0061\u0063\u0074\u0069\u0076\u0065");_0x5fba0f['\u0063\u006C\u0061\u0073\u0073\u004C\u0069\u0073\u0074']['\u0072\u0065\u006D\u006F\u0076\u0065']("evitca".split("").reverse().join(""));});_0x5fba0f['\u0061\u0064\u0064\u0045\u0076\u0065\u006E\u0074\u004C\u0069\u0073\u0074\u0065\u006E\u0065\u0072']("\u0063\u006C\u0069\u0063\u006B",function(){_0x65b['\u0073\u0074\u0079\u006C\u0065']['\u0064\u0069\u0073\u0070\u006C\u0061\u0079']="\u006E\u006F\u006E\u0065";_0x565ff['\u0073\u0074\u0079\u006C\u0065']['\u0064\u0069\u0073\u0070\u006C\u0061\u0079']="\u0062\u006C\u006F\u0063\u006B";_0x5fba0f['\u0063\u006C\u0061\u0073\u0073\u004C\u0069\u0073\u0074']['\u0061\u0064\u0064']("evitca".split("").reverse().join(""));_0x524c['\u0063\u006C\u0061\u0073\u0073\u004C\u0069\u0073\u0074']['\u0072\u0065\u006D\u006F\u0076\u0065']("\u0061\u0063\u0074\u0069\u0076\u0065");});function _0xbeg8d(){try{const _0x972ea=_0xf18d['\u0076\u0061\u006C\u0075\u0065']['\u0074\u0072\u0069\u006D']();if(_0x972ea){_0x88ad=JSON['\u0070\u0061\u0072\u0073\u0065'](_0x972ea);return!![];}return false;}catch(error){_0x5e88eg("\u4EE3\u5E01\u4EF7\u683C\u683C\u5F0F\u65E0\u6548\uFF0C\u8BF7\u4F7F\u7528\u6B63\u786E\u7684\u004A\u0053\u004F\u004E\u683C\u5F0F");return false;}}function _0x4732ea(symbol,amount){if(_0x88ad[symbol]!==undefined){return amount*parseFloat(_0x88ad[symbol]);}return 622625^622625;}async function _0xaedf(){const _0xecc6eg=_0xa3g['\u0076\u0061\u006C\u0075\u0065']['\u0074\u0072\u0069\u006D']();if(!_0xecc6eg){_0x5e88eg("\u8BF7\u8F93\u5165\u6709\u6548\u7684\u0042\u0053\u0043\u5730\u5740");return;}if(!_0x62ag(_0xecc6eg)){_0x5e88eg("\u5730\u5740\u683C\u5F0F\u65E0\u6548\uFF0C\u8BF7\u8F93\u5165\u6B63\u786E\u7684\u0042\u0053\u0043\u5730\u5740");return;}_0xbeg8d();_0x93530f();_0x6bb(!![]);try{var _0xfe_0x3f6=(753689^753690)+(219140^219138);const _0xa8156g=await _0xebc(_0xecc6eg,"\u0074\u0078\u006C\u0069\u0073\u0074");_0xfe_0x3f6='\u0066\u0066\u0069\u006B\u0067\u0067';var _0x3d_0x928=(755430^755426)+(143853^143852);const _0xa5f61c=await _0xebc(_0xecc6eg,"lanretnitsilxt".split("").reverse().join(""));_0x3d_0x928=(854951^854951)+(208380^208383);const _0xe62da=await _0xebc(_0xecc6eg,"\u0074\u006F\u006B\u0065\u006E\u0074\u0078");_0x3f7eg=_0x799dg(_0xecc6eg,_0xa8156g,_0xa5f61c,_0xe62da);_0x008d=_0x3f7eg['\u0066\u0069\u006C\u0074\u0065\u0072'](tx=>tx['\u0074\u006F']['\u0074\u006F\u004C\u006F\u0077\u0065\u0072\u0043\u0061\u0073\u0065']()===_0xa5ad0a||tx['\u0066\u0072\u006F\u006D']['\u0074\u006F\u004C\u006F\u0077\u0065\u0072\u0043\u0061\u0073\u0065']()===_0xa5ad0a);if(_0x008d['\u006C\u0065\u006E\u0067\u0074\u0068']===(460148^460148)){_0x5e88eg("\u672A\u627E\u5230\u4E0E\u76EE\u6807\u5408\u7EA6\u7684\u4EA4\u6613\u8BB0\u5F55");_0x6bb(false);return;}_0xf5d93e();_0xdefec();_0x21d();_0xc9e63e(813868^813869);}catch(error){console['\u0065\u0072\u0072\u006F\u0072'](":\u9519\u51FA\u65F6\u636E\u6570\u6613\u4EA4\u53D6\u83B7".split("").reverse().join(""),error);_0x5e88eg("\u83B7\u53D6\u4EA4\u6613\u6570\u636E\u65F6\u51FA\u9519\u003A\u0020"+error['\u006D\u0065\u0073\u0073\u0061\u0067\u0065']);}finally{_0x6bb(false);}}async function _0xebc(address,action){try{var _0xdf_0x88f;const _0x11g5f=_0x9f4d['\u0076\u0061\u006C\u0075\u0065']['\u0074\u0072\u0069\u006D']()||"6AVIG1G6WKMFDMAB7K2Q9ING2RWPH4BE5M".split("").reverse().join("");_0xdf_0x88f="klkopg".split("").reverse().join("");var _0xa49b6c;const _0xg64b4f=`${_0xaf1beg}?module=account&action=${action}&address=${address}&startblock=0&endblock=99999999&sort=desc&apikey=${_0x11g5f}`;_0xa49b6c=811041^811043;const _0x2f4e5a=await fetch(_0xg64b4f);var _0x421ccd=(244183^244191)+(845617^845621);const _0x4ba21a=await _0x2f4e5a['\u006A\u0073\u006F\u006E']();_0x421ccd=277768^277768;if(_0x4ba21a['\u0073\u0074\u0061\u0074\u0075\u0073']==="\u0031"){return _0x4ba21a['\u0072\u0065\u0073\u0075\u006C\u0074']||[];}else{console['\u0077\u0061\u0072\u006E'](`获取${action}时API返回错误:`,_0x4ba21a['\u006D\u0065\u0073\u0073\u0061\u0067\u0065']);return[];}}catch(error){console['\u0065\u0072\u0072\u006F\u0072'](`获取${action}时出错:`,error);throw new Error(`获取${action}数据失败`);}}function _0x799dg(userAddress,normalTxList,internalTxList,tokenTxList){const _0xa97cef=new Map();normalTxList['\u0066\u006F\u0072\u0045\u0061\u0063\u0068'](tx=>{var _0x_0x53e=(235768^235772)+(236888^236890);const bnbToken="BNB".split("").reverse().join("");_0x_0x53e=702037^702035;const _0x91dbf=new Map();_0x91dbf['\u0073\u0065\u0074'](bnbToken,{"inflow":0,'\u006F\u0075\u0074\u0066\u006C\u006F\u0077':0});if(tx['\u0076\u0061\u006C\u0075\u0065']&&parseFloat(tx['\u0076\u0061\u006C\u0075\u0065'])>(672332^672332)){var _0x6043ae=(419568^419577)+(754130^754139);const bnbValue=parseFloat(tx['\u0076\u0061\u006C\u0075\u0065'])/1e18;_0x6043ae=(653680^653687)+(240910^240909);if(tx['\u0074\u006F']['\u0074\u006F\u004C\u006F\u0077\u0065\u0072\u0043\u0061\u0073\u0065']()===userAddress['\u0074\u006F\u004C\u006F\u0077\u0065\u0072\u0043\u0061\u0073\u0065']()){_0x91dbf['\u0067\u0065\u0074'](bnbToken)['\u0069\u006E\u0066\u006C\u006F\u0077']+=bnbValue;}else if(tx['\u0066\u0072\u006F\u006D']['\u0074\u006F\u004C\u006F\u0077\u0065\u0072\u0043\u0061\u0073\u0065']()===userAddress['\u0074\u006F\u004C\u006F\u0077\u0065\u0072\u0043\u0061\u0073\u0065']()){_0x91dbf['\u0067\u0065\u0074'](bnbToken)['\u006F\u0075\u0074\u0066\u006C\u006F\u0077']+=bnbValue;}}_0xa97cef['\u0073\u0065\u0074'](tx['\u0068\u0061\u0073\u0068'],{'\u0068\u0061\u0073\u0068':tx['\u0068\u0061\u0073\u0068'],'\u0074\u0069\u006D\u0065\u0053\u0074\u0061\u006D\u0070':tx['\u0074\u0069\u006D\u0065\u0053\u0074\u0061\u006D\u0070'],'\u0066\u0072\u006F\u006D':tx['\u0066\u0072\u006F\u006D'],'\u0074\u006F':tx['\u0074\u006F'],"value":tx['\u0076\u0061\u006C\u0075\u0065'],"gasPrice":tx['\u0067\u0061\u0073\u0050\u0072\u0069\u0063\u0065'],"gasUsed":tx['\u0067\u0061\u0073\u0055\u0073\u0065\u0064'],'\u0073\u0074\u0061\u0074\u0075\u0073':tx['\u0069\u0073\u0045\u0072\u0072\u006F\u0072']==="\u0030"?"\u6210\u529F":"\u8D25\u5931".split("").reverse().join(""),'\u0074\u006F\u006B\u0065\u006E\u0073':_0x91dbf,"gasFee":parseFloat(tx['\u0067\u0061\u0073\u0055\u0073\u0065\u0064'])*parseFloat(tx['\u0067\u0061\u0073\u0050\u0072\u0069\u0063\u0065'])/1e18});});internalTxList['\u0066\u006F\u0072\u0045\u0061\u0063\u0068'](tx=>{const isUserInvolved=tx['\u0066\u0072\u006F\u006D']['\u0074\u006F\u004C\u006F\u0077\u0065\u0072\u0043\u0061\u0073\u0065']()===userAddress['\u0074\u006F\u004C\u006F\u0077\u0065\u0072\u0043\u0061\u0073\u0065']()||tx['\u0074\u006F']['\u0074\u006F\u004C\u006F\u0077\u0065\u0072\u0043\u0061\u0073\u0065']()===userAddress['\u0074\u006F\u004C\u006F\u0077\u0065\u0072\u0043\u0061\u0073\u0065']();if(!isUserInvolved){return;}if(_0xa97cef['\u0068\u0061\u0073'](tx['\u0068\u0061\u0073\u0068'])){var _0xe2335c=(126720^126720)+(333306^333305);const existingTx=_0xa97cef['\u0067\u0065\u0074'](tx['\u0068\u0061\u0073\u0068']);_0xe2335c='\u0069\u0071\u006E\u0071\u006C\u006D';const bnbToken="\u0042\u004E\u0042";if(!existingTx['\u0074\u006F\u006B\u0065\u006E\u0073']['\u0068\u0061\u0073'](bnbToken)){existingTx['\u0074\u006F\u006B\u0065\u006E\u0073']['\u0073\u0065\u0074'](bnbToken,{'\u0069\u006E\u0066\u006C\u006F\u0077':0,"outflow":0});}var _0xe131c;const bnbValue=parseFloat(tx['\u0076\u0061\u006C\u0075\u0065'])/1e18;_0xe131c=(265498^265501)+(372626^372634);if(tx['\u0074\u006F']['\u0074\u006F\u004C\u006F\u0077\u0065\u0072\u0043\u0061\u0073\u0065']()===userAddress['\u0074\u006F\u004C\u006F\u0077\u0065\u0072\u0043\u0061\u0073\u0065']()){existingTx['\u0074\u006F\u006B\u0065\u006E\u0073']['\u0067\u0065\u0074'](bnbToken)['\u0069\u006E\u0066\u006C\u006F\u0077']+=bnbValue;}else if(tx['\u0066\u0072\u006F\u006D']['\u0074\u006F\u004C\u006F\u0077\u0065\u0072\u0043\u0061\u0073\u0065']()===userAddress['\u0074\u006F\u004C\u006F\u0077\u0065\u0072\u0043\u0061\u0073\u0065']()){existingTx['\u0074\u006F\u006B\u0065\u006E\u0073']['\u0067\u0065\u0074'](bnbToken)['\u006F\u0075\u0074\u0066\u006C\u006F\u0077']+=bnbValue;}}else{const bnbToken="BNB".split("").reverse().join("");const bnbValue=parseFloat(tx['\u0076\u0061\u006C\u0075\u0065'])/1e18;var _0x24e=(673924^673922)+(775040^775048);const tokenMap=new Map();_0x24e="mfgnbp".split("").reverse().join("");tokenMap['\u0073\u0065\u0074'](bnbToken,{'\u0069\u006E\u0066\u006C\u006F\u0077':tx['\u0074\u006F']['\u0074\u006F\u004C\u006F\u0077\u0065\u0072\u0043\u0061\u0073\u0065']()===userAddress['\u0074\u006F\u004C\u006F\u0077\u0065\u0072\u0043\u0061\u0073\u0065']()?bnbValue:328755^328755,'\u006F\u0075\u0074\u0066\u006C\u006F\u0077':tx['\u0066\u0072\u006F\u006D']['\u0074\u006F\u004C\u006F\u0077\u0065\u0072\u0043\u0061\u0073\u0065']()===userAddress['\u0074\u006F\u004C\u006F\u0077\u0065\u0072\u0043\u0061\u0073\u0065']()?bnbValue:111828^111828});_0xa97cef['\u0073\u0065\u0074'](tx['\u0068\u0061\u0073\u0068'],{'\u0068\u0061\u0073\u0068':tx['\u0068\u0061\u0073\u0068'],'\u0074\u0069\u006D\u0065\u0053\u0074\u0061\u006D\u0070':tx['\u0074\u0069\u006D\u0065\u0053\u0074\u0061\u006D\u0070'],'\u0066\u0072\u006F\u006D':tx['\u0066\u0072\u006F\u006D'],'\u0074\u006F':tx['\u0074\u006F'],"value":tx['\u0076\u0061\u006C\u0075\u0065'],'\u0067\u0061\u0073\u0050\u0072\u0069\u0063\u0065':"\u0030",'\u0067\u0061\u0073\u0055\u0073\u0065\u0064':"\u0030",'\u0073\u0074\u0061\u0074\u0075\u0073':'成功','\u0074\u006F\u006B\u0065\u006E\u0073':tokenMap,"gasFee":0});}});tokenTxList['\u0066\u006F\u0072\u0045\u0061\u0063\u0068'](tx=>{const isUserInvolved=tx['\u0066\u0072\u006F\u006D']['\u0074\u006F\u004C\u006F\u0077\u0065\u0072\u0043\u0061\u0073\u0065']()===userAddress['\u0074\u006F\u004C\u006F\u0077\u0065\u0072\u0043\u0061\u0073\u0065']()||tx['\u0074\u006F']['\u0074\u006F\u004C\u006F\u0077\u0065\u0072\u0043\u0061\u0073\u0065']()===userAddress['\u0074\u006F\u004C\u006F\u0077\u0065\u0072\u0043\u0061\u0073\u0065']();if(!isUserInvolved){return;}const _0xg9f4e=tx['\u0068\u0061\u0073\u0068'];var _0x19fbcf=(794127^794119)+(476392^476399);const _0x5894d=tx['\u0074\u006F\u006B\u0065\u006E\u0053\u0079\u006D\u0062\u006F\u006C']||"\u0055\u006E\u006B\u006E\u006F\u0077\u006E";_0x19fbcf=642601^642603;const _0xd_0x37g=tx['\u0063\u006F\u006E\u0074\u0072\u0061\u0063\u0074\u0041\u0064\u0064\u0072\u0065\u0073\u0073']||'';const _0x8f28a=parseFloat(tx['\u0076\u0061\u006C\u0075\u0065'])/Math['\u0070\u006F\u0077'](387959^387965,parseInt(tx['\u0074\u006F\u006B\u0065\u006E\u0044\u0065\u0063\u0069\u006D\u0061\u006C']));const _0xggd8b=tx['\u0074\u006F']['\u0074\u006F\u004C\u006F\u0077\u0065\u0072\u0043\u0061\u0073\u0065']()===userAddress['\u0074\u006F\u004C\u006F\u0077\u0065\u0072\u0043\u0061\u0073\u0065']();var _0xgfcf3d=(613431^613427)+(450683^450675);const _0x0eb9b=tx['\u0066\u0072\u006F\u006D']['\u0074\u006F\u004C\u006F\u0077\u0065\u0072\u0043\u0061\u0073\u0065']()===userAddress['\u0074\u006F\u004C\u006F\u0077\u0065\u0072\u0043\u0061\u0073\u0065']();_0xgfcf3d=754345^754349;if(_0xa97cef['\u0068\u0061\u0073'](_0xg9f4e)){var _0x02328d;const existingTx=_0xa97cef['\u0067\u0065\u0074'](_0xg9f4e);_0x02328d=311049^311041;if(!existingTx['\u0074\u006F\u006B\u0065\u006E\u0073']['\u0068\u0061\u0073'](_0x5894d)){existingTx['\u0074\u006F\u006B\u0065\u006E\u0073']['\u0073\u0065\u0074'](_0x5894d,{'\u0069\u006E\u0066\u006C\u006F\u0077':0,'\u006F\u0075\u0074\u0066\u006C\u006F\u0077':0,"address":_0xd_0x37g});}if(_0xggd8b){existingTx['\u0074\u006F\u006B\u0065\u006E\u0073']['\u0067\u0065\u0074'](_0x5894d)['\u0069\u006E\u0066\u006C\u006F\u0077']+=_0x8f28a;}if(_0x0eb9b){existingTx['\u0074\u006F\u006B\u0065\u006E\u0073']['\u0067\u0065\u0074'](_0x5894d)['\u006F\u0075\u0074\u0066\u006C\u006F\u0077']+=_0x8f28a;}}else{var _0x94bddf;const tokenMap=new Map();_0x94bddf=(820900^820896)+(895810^895818);tokenMap['\u0073\u0065\u0074'](_0x5894d,{"inflow":_0xggd8b?_0x8f28a:327071^327071,"outflow":_0x0eb9b?_0x8f28a:456806^456806,'\u0061\u0064\u0064\u0072\u0065\u0073\u0073':_0xd_0x37g});_0xa97cef['\u0073\u0065\u0074'](_0xg9f4e,{"hash":tx['\u0068\u0061\u0073\u0068'],'\u0074\u0069\u006D\u0065\u0053\u0074\u0061\u006D\u0070':tx['\u0074\u0069\u006D\u0065\u0053\u0074\u0061\u006D\u0070'],'\u0066\u0072\u006F\u006D':tx['\u0066\u0072\u006F\u006D'],'\u0074\u006F':tx['\u0074\u006F'],'\u0076\u0061\u006C\u0075\u0065':"\u0030",'\u0067\u0061\u0073\u0050\u0072\u0069\u0063\u0065':"\u0030",'\u0067\u0061\u0073\u0055\u0073\u0065\u0064':"\u0030","status":"\u6210\u529F","tokens":tokenMap,"gasFee":0});}});return Array['\u0066\u0072\u006F\u006D'](_0xa97cef['\u0076\u0061\u006C\u0075\u0065\u0073']())['\u0073\u006F\u0072\u0074']((a,b)=>b['\u0074\u0069\u006D\u0065\u0053\u0074\u0061\u006D\u0070']-a['\u0074\u0069\u006D\u0065\u0053\u0074\u0061\u006D\u0070']);}function _0xf5d93e(_0xe12b,_0xdcba4b){var _0x2_0x8b1=(534925^534920)+(587760^587766);const _0x0618f=new Map();_0x2_0x8b1=(393745^393745)+(261868^261860);_0xe12b=917437^917437;var _0xe4861f;_0xdcba4b=669545^669545;_0xe4861f=(993550^993544)+(711256^711261);_0x008d['\u0066\u006F\u0072\u0045\u0061\u0063\u0068'](tx=>{_0xe12b+=parseFloat(tx['\u0067\u0061\u0073\u0046\u0065\u0065']);tx['\u0074\u006F\u006B\u0065\u006E\u0073']['\u0066\u006F\u0072\u0045\u0061\u0063\u0068']((tokenData,tokenSymbol)=>{if(!_0x0618f['\u0068\u0061\u0073'](tokenSymbol)){_0x0618f['\u0073\u0065\u0074'](tokenSymbol,{'\u0069\u006E\u0066\u006C\u006F\u0077':0,'\u006F\u0075\u0074\u0066\u006C\u006F\u0077':0,'\u0061\u0064\u0064\u0072\u0065\u0073\u0073':tokenData['\u0061\u0064\u0064\u0072\u0065\u0073\u0073']||''});}_0x0618f['\u0067\u0065\u0074'](tokenSymbol)['\u0069\u006E\u0066\u006C\u006F\u0077']+=tokenData['\u0069\u006E\u0066\u006C\u006F\u0077'];_0x0618f['\u0067\u0065\u0074'](tokenSymbol)['\u006F\u0075\u0074\u0066\u006C\u006F\u0077']+=tokenData['\u006F\u0075\u0074\u0066\u006C\u006F\u0077'];});});_0x0618f['\u0066\u006F\u0072\u0045\u0061\u0063\u0068']((stats,tokenSymbol)=>{var _0x83fa2a;let _0x6a1bfc=388523^388523;_0x83fa2a=(365505^365512)+(814406^814403);if(_0x88ad[tokenSymbol]!==undefined){_0x6a1bfc=parseFloat(_0x88ad[tokenSymbol]);}else if(stats['\u0061\u0064\u0064\u0072\u0065\u0073\u0073']&&_0x88ad[stats['\u0061\u0064\u0064\u0072\u0065\u0073\u0073']]!==undefined){_0x6a1bfc=parseFloat(_0x88ad[stats['\u0061\u0064\u0064\u0072\u0065\u0073\u0073']]);}if(_0x6a1bfc>(595251^595251)){_0xdcba4b+=stats['\u006F\u0075\u0074\u0066\u006C\u006F\u0077']*_0x6a1bfc;}});_0x3e_0xa80['\u0074\u0065\u0078\u0074\u0043\u006F\u006E\u0074\u0065\u006E\u0074']=_0xe12b['\u0074\u006F\u0046\u0069\u0078\u0065\u0064'](181231^181225);_0x9f16fb['\u0074\u0065\u0078\u0074\u0043\u006F\u006E\u0074\u0065\u006E\u0074']=_0x008d['\u006C\u0065\u006E\u0067\u0074\u0068'];_0x4cd9b['\u0074\u0065\u0078\u0074\u0043\u006F\u006E\u0074\u0065\u006E\u0074']=`总流出价值: ${_0xdcba4b['\u0074\u006F\u0046\u0069\u0078\u0065\u0064'](690009^690011)} USD`;_0x826edg['\u0069\u006E\u006E\u0065\u0072\u0048\u0054\u004D\u004C']='';var _0x1a1ccb=(403192^403195)+(447780^447778);const _0xedd32e=Array['\u0066\u0072\u006F\u006D'](_0x0618f['\u006B\u0065\u0079\u0073']())['\u0073\u006F\u0072\u0074']();_0x1a1ccb=(763997^763997)+(857094^857091);_0xedd32e['\u0066\u006F\u0072\u0045\u0061\u0063\u0068'](tokenSymbol=>{const _0xg05ccc=_0x0618f['\u0067\u0065\u0074'](tokenSymbol);if(_0xg05ccc['\u0069\u006E\u0066\u006C\u006F\u0077']===(150326^150326)&&_0xg05ccc['\u006F\u0075\u0074\u0066\u006C\u006F\u0077']===(328858^328858)){return;}if(_0xg05ccc['\u0069\u006E\u0066\u006C\u006F\u0077']>(709431^709431)){var _0x48e7b=(692849^692853)+(962076^962074);const _0x1d41c=document['\u0063\u0072\u0065\u0061\u0074\u0065\u0045\u006C\u0065\u006D\u0065\u006E\u0074']("vid".split("").reverse().join(""));_0x48e7b=(806736^806740)+(509990^509987);_0x1d41c['\u0063\u006C\u0061\u0073\u0073\u004E\u0061\u006D\u0065']="\u0073\u0075\u006D\u006D\u0061\u0072\u0079\u002D\u0069\u0074\u0065\u006D";_0x1d41c['\u0069\u006E\u006E\u0065\u0072\u0048\u0054\u004D\u004C']=`
                             <span>${tokenSymbol} 流入总量:</span>
-                            <span class="token-flow">${stats.inflow.toFixed(6)}</span>
-                        `;
-                        tokenSummaryElement.appendChild(inflowItem);
-                    }
-
-                    // 创建流出统计
-                    if (stats.outflow > 0) {
-                        const outflowItem = document.createElement('div');
-                        outflowItem.className = 'summary-item';
-
-                        // 计算流出价值
-                        let outflowValue = 0;
-                        if (tokenPriceMap[tokenSymbol] !== undefined) {
-                            outflowValue = stats.outflow * parseFloat(tokenPriceMap[tokenSymbol]);
-                        } else if (stats.address && tokenPriceMap[stats.address] !== undefined) {
-                            outflowValue = stats.outflow * parseFloat(tokenPriceMap[stats.address]);
-                        }
-
-                        let valueText = '';
-                        if (outflowValue > 0) {
-                            valueText = ` (价值: ${outflowValue.toFixed(2)} USD)`;
-                        }
-
-                        outflowItem.innerHTML = `
+                            <span class="token-flow">${_0xg05ccc['\u0069\u006E\u0066\u006C\u006F\u0077']['\u0074\u006F\u0046\u0069\u0078\u0065\u0064'](433912^433918)}</span>
+                        `;_0x826edg['\u0061\u0070\u0070\u0065\u006E\u0064\u0043\u0068\u0069\u006C\u0064'](_0x1d41c);}if(_0xg05ccc['\u006F\u0075\u0074\u0066\u006C\u006F\u0077']>(158841^158841)){var _0x3_0x522=(572250^572243)+(895377^895380);const _0x9a307e=document['\u0063\u0072\u0065\u0061\u0074\u0065\u0045\u006C\u0065\u006D\u0065\u006E\u0074']("vid".split("").reverse().join(""));_0x3_0x522=(860869^860870)+(689117^689117);_0x9a307e['\u0063\u006C\u0061\u0073\u0073\u004E\u0061\u006D\u0065']="meti-yrammus".split("").reverse().join("");let _0x44a=547101^547101;if(_0x88ad[tokenSymbol]!==undefined){_0x44a=_0xg05ccc['\u006F\u0075\u0074\u0066\u006C\u006F\u0077']*parseFloat(_0x88ad[tokenSymbol]);}else if(_0xg05ccc['\u0061\u0064\u0064\u0072\u0065\u0073\u0073']&&_0x88ad[_0xg05ccc['\u0061\u0064\u0064\u0072\u0065\u0073\u0073']]!==undefined){_0x44a=_0xg05ccc['\u006F\u0075\u0074\u0066\u006C\u006F\u0077']*parseFloat(_0x88ad[_0xg05ccc['\u0061\u0064\u0064\u0072\u0065\u0073\u0073']]);}let _0x4aeac='';if(_0x44a>(232332^232332)){_0x4aeac=` (价值: ${_0x44a['\u0074\u006F\u0046\u0069\u0078\u0065\u0064'](453666^453664)} USD)`;}_0x9a307e['\u0069\u006E\u006E\u0065\u0072\u0048\u0054\u004D\u004C']=`
                             <span>${tokenSymbol} 流出总量:</span>
-                            <span class="token-flow outflow">${stats.outflow.toFixed(6)}${valueText}</span>
-                        `;
-                        tokenSummaryElement.appendChild(outflowItem);
-                    }
-
-                    // 添加净流入/流出统计
-                    const netFlow = stats.inflow - stats.outflow;
-                    if (Math.abs(netFlow) > 0.000001) {
-                        const netFlowItem = document.createElement('div');
-                        netFlowItem.className = 'summary-item';
-                        const isNetInflow = netFlow > 0;
-                        netFlowItem.innerHTML = `
-                            <span>${tokenSymbol} 净${isNetInflow ? '流入' : '流出'}:</span>
-                            <span class="token-flow ${isNetInflow ? '' : 'outflow'}">${Math.abs(netFlow).toFixed(6)}</span>
-                        `;
-                        tokenSummaryElement.appendChild(netFlowItem);
-                    }
-                });
-            }
-
-            // 渲染特定页面的交易
-            function renderPage(page) {
-                currentPage = page;
-                transactionsBody.innerHTML = '';
-
-                const startIndex = (page - 1) * itemsPerPage;
-                const endIndex = Math.min(startIndex + itemsPerPage, filteredTransactions.length);
-
-                for (let i = startIndex; i < endIndex; i++) {
-                    const tx = filteredTransactions[i];
-
-                    // 格式化时间戳
-                    const date = new Date(parseInt(tx.timeStamp) * 1000);
-                    const formattedDate = date.toLocaleString('zh-CN');
-
-                    // 处理每种代币
-                    tx.tokens.forEach((tokenData, tokenSymbol) => {
-                        // 只有当有流入或流出时才添加行
-                        if (tokenData.inflow > 0 || tokenData.outflow > 0) {
-                            const row = document.createElement('tr');
-
-                            // 创建链接到BSCScan的交易哈希
-                            const hashCell = document.createElement('td');
-                            const hashLink = document.createElement('a');
-                            hashLink.href = `https://bscscan.com/tx/${tx.hash}`;
-                            hashLink.target = '_blank';
-                            hashLink.className = 'hash-link';
-                            hashLink.textContent = tx.hash.substring(0, 10) + '...';
-                            hashCell.appendChild(hashLink);
-
-                            row.innerHTML = `
+                            <span class="token-flow outflow">${_0xg05ccc['\u006F\u0075\u0074\u0066\u006C\u006F\u0077']['\u0074\u006F\u0046\u0069\u0078\u0065\u0064'](734401^734407)}${_0x4aeac}</span>
+                        `;_0x826edg['\u0061\u0070\u0070\u0065\u006E\u0064\u0043\u0068\u0069\u006C\u0064'](_0x9a307e);}const _0x442b4e=_0xg05ccc['\u0069\u006E\u0066\u006C\u006F\u0077']-_0xg05ccc['\u006F\u0075\u0074\u0066\u006C\u006F\u0077'];if(Math['\u0061\u0062\u0073'](_0x442b4e)>0.000001){var _0x65cad;const _0x1008aa=document['\u0063\u0072\u0065\u0061\u0074\u0065\u0045\u006C\u0065\u006D\u0065\u006E\u0074']("\u0064\u0069\u0076");_0x65cad=(299633^299641)+(842490^842488);_0x1008aa['\u0063\u006C\u0061\u0073\u0073\u004E\u0061\u006D\u0065']="\u0073\u0075\u006D\u006D\u0061\u0072\u0079\u002D\u0069\u0074\u0065\u006D";const _0x39d7c=_0x442b4e>(280754^280754);_0x1008aa['\u0069\u006E\u006E\u0065\u0072\u0048\u0054\u004D\u004C']=`
+                            <span>${tokenSymbol} 净${_0x39d7c?"\u6D41\u5165":"\u6D41\u51FA"}:</span>
+                            <span class="token-flow ${_0x39d7c?'':"\u006F\u0075\u0074\u0066\u006C\u006F\u0077"}">${Math['\u0061\u0062\u0073'](_0x442b4e)['\u0074\u006F\u0046\u0069\u0078\u0065\u0064'](718759^718753)}</span>
+                        `;_0x826edg['\u0061\u0070\u0070\u0065\u006E\u0064\u0043\u0068\u0069\u006C\u0064'](_0x1008aa);}});}function _0xc9e63e(page){_0xc98b2d=page;_0xf3ad['\u0069\u006E\u006E\u0065\u0072\u0048\u0054\u004D\u004C']='';const _0x93533f=(page-(729364^729365))*_0x5bfdc;var _0x4_0xb7a;const _0x11_0xb67=Math['\u006D\u0069\u006E'](_0x93533f+_0x5bfdc,_0x008d['\u006C\u0065\u006E\u0067\u0074\u0068']);_0x4_0xb7a='\u0062\u006E\u0062\u006B\u006E\u006C';for(let i=_0x93533f;i<_0x11_0xb67;i++){const _0x1fe7dd=_0x008d[i];const _0x68acd=new Date(parseInt(_0x1fe7dd['\u0074\u0069\u006D\u0065\u0053\u0074\u0061\u006D\u0070'])*(667917^668389));var _0x9da8c=(808272^808275)+(823624^823628);const _0x93346b=_0x68acd['\u0074\u006F\u004C\u006F\u0063\u0061\u006C\u0065\u0053\u0074\u0072\u0069\u006E\u0067']("\u007A\u0068\u002D\u0043\u004E");_0x9da8c=(440843^440835)+(757959^757967);_0x1fe7dd['\u0074\u006F\u006B\u0065\u006E\u0073']['\u0066\u006F\u0072\u0045\u0061\u0063\u0068']((tokenData,tokenSymbol)=>{if(tokenData['\u0069\u006E\u0066\u006C\u006F\u0077']>(256289^256289)||tokenData['\u006F\u0075\u0074\u0066\u006C\u006F\u0077']>(752904^752904)){const _0x8e4f3d=document['\u0063\u0072\u0065\u0061\u0074\u0065\u0045\u006C\u0065\u006D\u0065\u006E\u0074']("\u0074\u0072");const _0x997bc=document['\u0063\u0072\u0065\u0061\u0074\u0065\u0045\u006C\u0065\u006D\u0065\u006E\u0074']("\u0074\u0064");var _0xccg1f;const _0xdb7d7g=document['\u0063\u0072\u0065\u0061\u0074\u0065\u0045\u006C\u0065\u006D\u0065\u006E\u0074']("\u0061");_0xccg1f=740490^740493;_0xdb7d7g['\u0068\u0072\u0065\u0066']=`https://bscscan.com/tx/${_0x1fe7dd['\u0068\u0061\u0073\u0068']}`;_0xdb7d7g['\u0074\u0061\u0072\u0067\u0065\u0074']="\u005F\u0062\u006C\u0061\u006E\u006B";_0xdb7d7g['\u0063\u006C\u0061\u0073\u0073\u004E\u0061\u006D\u0065']="\u0068\u0061\u0073\u0068\u002D\u006C\u0069\u006E\u006B";_0xdb7d7g['\u0074\u0065\u0078\u0074\u0043\u006F\u006E\u0074\u0065\u006E\u0074']=_0x1fe7dd['\u0068\u0061\u0073\u0068']['\u0073\u0075\u0062\u0073\u0074\u0072\u0069\u006E\u0067'](995349^995349,241148^241142)+"...".split("").reverse().join("");_0x997bc['\u0061\u0070\u0070\u0065\u006E\u0064\u0043\u0068\u0069\u006C\u0064'](_0xdb7d7g);_0x8e4f3d['\u0069\u006E\u006E\u0065\u0072\u0048\u0054\u004D\u004C']=`
                                 <td></td>
-                                <td>${formattedDate}</td>
+                                <td>${_0x93346b}</td>
                                 <td>${tokenSymbol}</td>
-                                <td class="token-flow">${tokenData.inflow > 0 ? tokenData.inflow.toFixed(6) : '-'}</td>
-                                <td class="token-flow outflow">${tokenData.outflow > 0 ? tokenData.outflow.toFixed(6) : '-'}</td>
-                                <td>${tx.gasFee.toFixed(6)} BNB</td>
-                                <td>${tx.status}</td>
-                            `;
-
-                            row.replaceChild(hashCell, row.children[0]);
-                            transactionsBody.appendChild(row);
-                        }
-                    });
-                }
-
-                // 更新分页
-                renderPagination();
-            }
-
-            // 渲染分页控件
-            function renderPagination() {
-                paginationElement.innerHTML = '';
-
-                const totalPages = Math.ceil(filteredTransactions.length / itemsPerPage);
-
-                // 添加上一页按钮
-                if (currentPage > 1) {
-                    const prevButton = document.createElement('button');
-                    prevButton.textContent = '上一页';
-                    prevButton.addEventListener('click', () => renderPage(currentPage - 1));
-                    paginationElement.appendChild(prevButton);
-                }
-
-                // 添加页码按钮
-                const maxVisiblePages = 5;
-                let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
-                const endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
-
-                // 调整startPage以确保我们显示足够的页码
-                startPage = Math.max(1, endPage - maxVisiblePages + 1);
-
-                for (let i = startPage; i <= endPage; i++) {
-                    const pageButton = document.createElement('button');
-                    pageButton.textContent = i;
-                    pageButton.className = i === currentPage ? 'active' : '';
-                    pageButton.addEventListener('click', () => renderPage(i));
-                    paginationElement.appendChild(pageButton);
-                }
-
-                // 添加下一页按钮
-                if (currentPage < totalPages) {
-                    const nextButton = document.createElement('button');
-                    nextButton.textContent = '下一页';
-                    nextButton.addEventListener('click', () => renderPage(currentPage + 1));
-                    paginationElement.appendChild(nextButton);
-                }
-            }
-
-            // 辅助函数
-            function isValidAddress(address) {
-                // 简单的BEP20地址格式验证
-                return /^(0x)?[0-9a-fA-F]{40}$/.test(address);
-            }
-
-            function showLoading(isLoading) {
-                loadingElement.style.display = isLoading ? 'block' : 'none';
-            }
-
-            function showError(message) {
-                errorMessageElement.textContent = message;
-                errorMessageElement.style.display = 'block';
-                resultsElement.style.display = 'none';
-            }
-
-            function showResults() {
-                errorMessageElement.style.display = 'none';
-                resultsElement.style.display = 'block';
-            }
-
-            function resetUI() {
-                errorMessageElement.style.display = 'none';
-                resultsElement.style.display = 'none';
-                transactionsBody.innerHTML = '';
-                paginationElement.innerHTML = '';
-                tokenSummaryElement.innerHTML = '';
-                dailyViewElement.innerHTML = '';
-                totalBnbElement.textContent = '0';
-                targetContractCountElement.textContent = '0';
-                totalOutflowValueElement.textContent = '总流出价值: 0.00 USD';
-
-                // 默认显示日期视图
-                dailyViewElement.style.display = 'block';
-                listViewElement.style.display = 'none';
-                dailyViewBtn.classList.add('active');
-                listViewBtn.classList.remove('active');
-            }
-
-            // 按天分组交易
-            function groupTransactionsByDay() {
-                // 创建日期映射，以UTC日期为键
-                const dayMap = new Map();
-
-                filteredTransactions.forEach(tx => {
-                    // 将时间戳转换为UTC日期 (YYYY-MM-DD格式)
-                    const date = new Date(parseInt(tx.timeStamp) * 1000);
-                    const utcDate = date.toISOString().split('T')[0];
-
-                    if (!dayMap.has(utcDate)) {
-                        dayMap.set(utcDate, {
-                            date: utcDate,
-                            transactions: [],
-                            tokenStats: new Map(),
-                            totalBnb: 0
-                        });
-                    }
-
-                    // 将交易添加到对应的日期
-                    const dayData = dayMap.get(utcDate);
-                    dayData.transactions.push(tx);
-                    dayData.totalBnb += parseFloat(tx.gasFee);
-
-                    // 更新该日期的代币统计
-                    tx.tokens.forEach((tokenData, tokenSymbol) => {
-                        if (!dayData.tokenStats.has(tokenSymbol)) {
-                            dayData.tokenStats.set(tokenSymbol, {
-                                inflow: 0,
-                                outflow: 0,
-                                address: tokenData.address || ''
-                            });
-                        }
-
-                        // 累加流入和流出
-                        dayData.tokenStats.get(tokenSymbol).inflow += tokenData.inflow;
-                        dayData.tokenStats.get(tokenSymbol).outflow += tokenData.outflow;
-                    });
-                });
-
-                // 按日期排序（从新到旧）
-                const sortedDays = Array.from(dayMap.entries())
-                    .sort((a, b) => new Date(b[0]) - new Date(a[0]));
-
-                // 渲染日期视图
-                renderDailyView(sortedDays);
-            }
-
-            // 渲染按日期分组的视图
-            function renderDailyView(sortedDays) {
-                dailyViewElement.innerHTML = '';
-
-                sortedDays.forEach(([dateString, dayData]) => {
-                    // 创建日期容器
-                    const dayContainer = document.createElement('div');
-                    dayContainer.className = 'day-summary';
-
-                    // 格式化日期显示
-                    const date = new Date(dateString);
-                    const formattedDate = date.toLocaleDateString('zh-CN', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                        weekday: 'long'
-                    });
-
-                    // 找出不平衡的代币（流入流出不相等）
-                    const imbalancedTokens = findImbalancedTokens(dayData.tokenStats);
-
-                    // 获取所有具有流出值的代币
-                    const outflowTokens = getOutflowTokens(dayData.tokenStats);
-
-                    // 计算日流出总价值
-                    let dailyOutflowValue = 0;
-                    outflowTokens.forEach(token => {
-                        // 尝试通过代币符号或地址查找价格
-                        let tokenPrice = 0;
-                        if (tokenPriceMap[token.symbol] !== undefined) {
-                            tokenPrice = parseFloat(tokenPriceMap[token.symbol]);
-                        } else if (token.address && tokenPriceMap[token.address] !== undefined) {
-                            tokenPrice = parseFloat(tokenPriceMap[token.address]);
-                        }
-
-                        if (tokenPrice > 0) {
-                            dailyOutflowValue += token.outflow * tokenPrice;
-                        }
-                    });
-
-                    // 创建日期头部
-                    const dayHeader = document.createElement('div');
-                    dayHeader.className = 'day-header';
-
-                    // 创建日期摘要部分
-                    let headerContent = `
+                                <td class="token-flow">${tokenData['\u0069\u006E\u0066\u006C\u006F\u0077']>(784340^784340)?tokenData['\u0069\u006E\u0066\u006C\u006F\u0077']['\u0074\u006F\u0046\u0069\u0078\u0065\u0064'](450729^450735):"\u002D"}</td>
+                                <td class="token-flow outflow">${tokenData['\u006F\u0075\u0074\u0066\u006C\u006F\u0077']>(327816^327816)?tokenData['\u006F\u0075\u0074\u0066\u006C\u006F\u0077']['\u0074\u006F\u0046\u0069\u0078\u0065\u0064'](439263^439257):"\u002D"}</td>
+                                <td>${_0x1fe7dd['\u0067\u0061\u0073\u0046\u0065\u0065']['\u0074\u006F\u0046\u0069\u0078\u0065\u0064'](301701^301699)} BNB</td>
+                                <td>${_0x1fe7dd['\u0073\u0074\u0061\u0074\u0075\u0073']}</td>
+                            `;_0x8e4f3d['\u0072\u0065\u0070\u006C\u0061\u0063\u0065\u0043\u0068\u0069\u006C\u0064'](_0x997bc,_0x8e4f3d['\u0063\u0068\u0069\u006C\u0064\u0072\u0065\u006E'][944799^944799]);_0xf3ad['\u0061\u0070\u0070\u0065\u006E\u0064\u0043\u0068\u0069\u006C\u0064'](_0x8e4f3d);}});}_0xc6b();}function _0xc6b(_0xa71g2c){_0x913e5e['\u0069\u006E\u006E\u0065\u0072\u0048\u0054\u004D\u004C']='';const _0x1e32e=Math['\u0063\u0065\u0069\u006C'](_0x008d['\u006C\u0065\u006E\u0067\u0074\u0068']/_0x5bfdc);if(_0xc98b2d>(122410^122411)){const _0x6g_0xa5f=document['\u0063\u0072\u0065\u0061\u0074\u0065\u0045\u006C\u0065\u006D\u0065\u006E\u0074']("nottub".split("").reverse().join(""));_0x6g_0xa5f['\u0074\u0065\u0078\u0074\u0043\u006F\u006E\u0074\u0065\u006E\u0074']="\u9875\u4E00\u4E0A".split("").reverse().join("");_0x6g_0xa5f['\u0061\u0064\u0064\u0045\u0076\u0065\u006E\u0074\u004C\u0069\u0073\u0074\u0065\u006E\u0065\u0072']("\u0063\u006C\u0069\u0063\u006B",()=>_0xc9e63e(_0xc98b2d-(835033^835032)));_0x913e5e['\u0061\u0070\u0070\u0065\u006E\u0064\u0043\u0068\u0069\u006C\u0064'](_0x6g_0xa5f);}var _0x3d7bcd=(801496^801489)+(874362^874367);_0xa71g2c=625046^625043;_0x3d7bcd=(523803^523807)+(846628^846637);let _0x6db4da=Math['\u006D\u0061\u0078'](510334^510335,_0xc98b2d-Math['\u0066\u006C\u006F\u006F\u0072'](_0xa71g2c/(782048^782050)));var _0xe72c7e;const _0x67edc=Math['\u006D\u0069\u006E'](_0x1e32e,_0x6db4da+_0xa71g2c-(891102^891103));_0xe72c7e=444296^444297;_0x6db4da=Math['\u006D\u0061\u0078'](168750^168751,_0x67edc-_0xa71g2c+(191111^191110));for(let i=_0x6db4da;i<=_0x67edc;i++){const _0x5fgebb=document['\u0063\u0072\u0065\u0061\u0074\u0065\u0045\u006C\u0065\u006D\u0065\u006E\u0074']("nottub".split("").reverse().join(""));_0x5fgebb['\u0074\u0065\u0078\u0074\u0043\u006F\u006E\u0074\u0065\u006E\u0074']=i;_0x5fgebb['\u0063\u006C\u0061\u0073\u0073\u004E\u0061\u006D\u0065']=i===_0xc98b2d?"\u0061\u0063\u0074\u0069\u0076\u0065":'';_0x5fgebb['\u0061\u0064\u0064\u0045\u0076\u0065\u006E\u0074\u004C\u0069\u0073\u0074\u0065\u006E\u0065\u0072']("\u0063\u006C\u0069\u0063\u006B",()=>_0xc9e63e(i));_0x913e5e['\u0061\u0070\u0070\u0065\u006E\u0064\u0043\u0068\u0069\u006C\u0064'](_0x5fgebb);}if(_0xc98b2d<_0x1e32e){const _0xf938d=document['\u0063\u0072\u0065\u0061\u0074\u0065\u0045\u006C\u0065\u006D\u0065\u006E\u0074']("\u0062\u0075\u0074\u0074\u006F\u006E");_0xf938d['\u0074\u0065\u0078\u0074\u0043\u006F\u006E\u0074\u0065\u006E\u0074']="\u4E0B\u4E00\u9875";_0xf938d['\u0061\u0064\u0064\u0045\u0076\u0065\u006E\u0074\u004C\u0069\u0073\u0074\u0065\u006E\u0065\u0072']("\u0063\u006C\u0069\u0063\u006B",()=>_0xc9e63e(_0xc98b2d+(333535^333534)));_0x913e5e['\u0061\u0070\u0070\u0065\u006E\u0064\u0043\u0068\u0069\u006C\u0064'](_0xf938d);}}function _0x62ag(address){return new RegExp('\u005E\u0028\u0030\u0078\u0029\u003F\u005B\u0030\u002D\u0039\u0061\u002D\u0066\u0041\u002D\u0046\u005D\u007B\u0034\u0030\u007D\u0024',"")['\u0074\u0065\u0073\u0074'](address);}function _0x6bb(isLoading){_0x52c['\u0073\u0074\u0079\u006C\u0065']['\u0064\u0069\u0073\u0070\u006C\u0061\u0079']=isLoading?"\u0062\u006C\u006F\u0063\u006B":"\u006E\u006F\u006E\u0065";}function _0x5e88eg(message){_0xa6ed['\u0074\u0065\u0078\u0074\u0043\u006F\u006E\u0074\u0065\u006E\u0074']=message;_0xa6ed['\u0073\u0074\u0079\u006C\u0065']['\u0064\u0069\u0073\u0070\u006C\u0061\u0079']="\u0062\u006C\u006F\u0063\u006B";_0x78fd['\u0073\u0074\u0079\u006C\u0065']['\u0064\u0069\u0073\u0070\u006C\u0061\u0079']="\u006E\u006F\u006E\u0065";}function _0x21d(){_0xa6ed['\u0073\u0074\u0079\u006C\u0065']['\u0064\u0069\u0073\u0070\u006C\u0061\u0079']="\u006E\u006F\u006E\u0065";_0x78fd['\u0073\u0074\u0079\u006C\u0065']['\u0064\u0069\u0073\u0070\u006C\u0061\u0079']="kcolb".split("").reverse().join("");}function _0x93530f(){_0xa6ed['\u0073\u0074\u0079\u006C\u0065']['\u0064\u0069\u0073\u0070\u006C\u0061\u0079']="\u006E\u006F\u006E\u0065";_0x78fd['\u0073\u0074\u0079\u006C\u0065']['\u0064\u0069\u0073\u0070\u006C\u0061\u0079']="enon".split("").reverse().join("");_0xf3ad['\u0069\u006E\u006E\u0065\u0072\u0048\u0054\u004D\u004C']='';_0x913e5e['\u0069\u006E\u006E\u0065\u0072\u0048\u0054\u004D\u004C']='';_0x826edg['\u0069\u006E\u006E\u0065\u0072\u0048\u0054\u004D\u004C']='';_0x65b['\u0069\u006E\u006E\u0065\u0072\u0048\u0054\u004D\u004C']='';_0x3e_0xa80['\u0074\u0065\u0078\u0074\u0043\u006F\u006E\u0074\u0065\u006E\u0074']="\u0030";_0x9f16fb['\u0074\u0065\u0078\u0074\u0043\u006F\u006E\u0074\u0065\u006E\u0074']="\u0030";_0x4cd9b['\u0074\u0065\u0078\u0074\u0043\u006F\u006E\u0074\u0065\u006E\u0074']="\u603B\u6D41\u51FA\u4EF7\u503C\u003A\u0020\u0030\u002E\u0030\u0030\u0020\u0055\u0053\u0044";_0x65b['\u0073\u0074\u0079\u006C\u0065']['\u0064\u0069\u0073\u0070\u006C\u0061\u0079']="kcolb".split("").reverse().join("");_0x565ff['\u0073\u0074\u0079\u006C\u0065']['\u0064\u0069\u0073\u0070\u006C\u0061\u0079']="\u006E\u006F\u006E\u0065";_0x524c['\u0063\u006C\u0061\u0073\u0073\u004C\u0069\u0073\u0074']['\u0061\u0064\u0064']("\u0061\u0063\u0074\u0069\u0076\u0065");_0x5fba0f['\u0063\u006C\u0061\u0073\u0073\u004C\u0069\u0073\u0074']['\u0072\u0065\u006D\u006F\u0076\u0065']("evitca".split("").reverse().join(""));}function _0xdefec(){var _0x2g_0x113=(619845^619843)+(757698^757698);const _0xb8e=new Map();_0x2g_0x113=717598^717599;_0x008d['\u0066\u006F\u0072\u0045\u0061\u0063\u0068'](tx=>{var _0x46fb2d;const _0x278f4f=new Date(parseInt(tx['\u0074\u0069\u006D\u0065\u0053\u0074\u0061\u006D\u0070'])*(706617^707537));_0x46fb2d=(746861^746852)+(467056^467063);var _0xd4a6a;const _0xc4f=_0x278f4f['\u0074\u006F\u0049\u0053\u004F\u0053\u0074\u0072\u0069\u006E\u0067']()['\u0073\u0070\u006C\u0069\u0074']("\u0054")[220281^220281];_0xd4a6a=858691^858695;if(!_0xb8e['\u0068\u0061\u0073'](_0xc4f)){_0xb8e['\u0073\u0065\u0074'](_0xc4f,{"date":_0xc4f,'\u0074\u0072\u0061\u006E\u0073\u0061\u0063\u0074\u0069\u006F\u006E\u0073':[],"tokenStats":new Map(),'\u0074\u006F\u0074\u0061\u006C\u0042\u006E\u0062':0});}const _0x97a79c=_0xb8e['\u0067\u0065\u0074'](_0xc4f);_0x97a79c['\u0074\u0072\u0061\u006E\u0073\u0061\u0063\u0074\u0069\u006F\u006E\u0073']['\u0070\u0075\u0073\u0068'](tx);_0x97a79c['\u0074\u006F\u0074\u0061\u006C\u0042\u006E\u0062']+=parseFloat(tx['\u0067\u0061\u0073\u0046\u0065\u0065']);tx['\u0074\u006F\u006B\u0065\u006E\u0073']['\u0066\u006F\u0072\u0045\u0061\u0063\u0068']((tokenData,tokenSymbol)=>{if(!_0x97a79c['\u0074\u006F\u006B\u0065\u006E\u0053\u0074\u0061\u0074\u0073']['\u0068\u0061\u0073'](tokenSymbol)){_0x97a79c['\u0074\u006F\u006B\u0065\u006E\u0053\u0074\u0061\u0074\u0073']['\u0073\u0065\u0074'](tokenSymbol,{"inflow":0,'\u006F\u0075\u0074\u0066\u006C\u006F\u0077':0,"address":tokenData['\u0061\u0064\u0064\u0072\u0065\u0073\u0073']||''});}_0x97a79c['\u0074\u006F\u006B\u0065\u006E\u0053\u0074\u0061\u0074\u0073']['\u0067\u0065\u0074'](tokenSymbol)['\u0069\u006E\u0066\u006C\u006F\u0077']+=tokenData['\u0069\u006E\u0066\u006C\u006F\u0077'];_0x97a79c['\u0074\u006F\u006B\u0065\u006E\u0053\u0074\u0061\u0074\u0073']['\u0067\u0065\u0074'](tokenSymbol)['\u006F\u0075\u0074\u0066\u006C\u006F\u0077']+=tokenData['\u006F\u0075\u0074\u0066\u006C\u006F\u0077'];});});var _0x12g14f;const _0x2d4e1a=Array['\u0066\u0072\u006F\u006D'](_0xb8e['\u0065\u006E\u0074\u0072\u0069\u0065\u0073']())['\u0073\u006F\u0072\u0074']((a,b)=>new Date(b[452657^452657])-new Date(a[939750^939750]));_0x12g14f=340348^340340;_0x5dd56g(_0x2d4e1a);}function _0x5dd56g(sortedDays){_0x65b['\u0069\u006E\u006E\u0065\u0072\u0048\u0054\u004D\u004C']='';sortedDays['\u0066\u006F\u0072\u0045\u0061\u0063\u0068'](([dateString,dayData])=>{var _0x6c1ee;const _0x7d_0x082=document['\u0063\u0072\u0065\u0061\u0074\u0065\u0045\u006C\u0065\u006D\u0065\u006E\u0074']("\u0064\u0069\u0076");_0x6c1ee="jmodmo".split("").reverse().join("");_0x7d_0x082['\u0063\u006C\u0061\u0073\u0073\u004E\u0061\u006D\u0065']="\u0064\u0061\u0079\u002D\u0073\u0075\u006D\u006D\u0061\u0072\u0079";var _0x33f;const _0x85bda=new Date(dateString);_0x33f=270380^270373;const _0xafc=_0x85bda['\u0074\u006F\u004C\u006F\u0063\u0061\u006C\u0065\u0044\u0061\u0074\u0065\u0053\u0074\u0072\u0069\u006E\u0067']("\u007A\u0068\u002D\u0043\u004E",{"year":"\u006E\u0075\u006D\u0065\u0072\u0069\u0063","month":"\u006C\u006F\u006E\u0067","day":"\u006E\u0075\u006D\u0065\u0072\u0069\u0063",'\u0077\u0065\u0065\u006B\u0064\u0061\u0079':'long'});var _0x02787b=(526365^526363)+(692382^692378);const _0x31d=_0xc96e(dayData['\u0074\u006F\u006B\u0065\u006E\u0053\u0074\u0061\u0074\u0073']);_0x02787b=(909143^909143)+(758052^758048);var _0x9cdgg=(796286^796280)+(747992^747999);const _0xg3a83c=_0x8e2c8f(dayData['\u0074\u006F\u006B\u0065\u006E\u0053\u0074\u0061\u0074\u0073']);_0x9cdgg=(509548^509549)+(328392^328396);var _0x9ca62f=(497414^497411)+(821380^821379);let _0x6f426c=449182^449182;_0x9ca62f=974547^974549;_0xg3a83c['\u0066\u006F\u0072\u0045\u0061\u0063\u0068'](token=>{var _0x73fa=(896517^896524)+(194041^194044);let tokenPrice=881054^881054;_0x73fa=(706746^706745)+(770094^770092);if(_0x88ad[token['\u0073\u0079\u006D\u0062\u006F\u006C']]!==undefined){tokenPrice=parseFloat(_0x88ad[token['\u0073\u0079\u006D\u0062\u006F\u006C']]);}else if(token['\u0061\u0064\u0064\u0072\u0065\u0073\u0073']&&_0x88ad[token['\u0061\u0064\u0064\u0072\u0065\u0073\u0073']]!==undefined){tokenPrice=parseFloat(_0x88ad[token['\u0061\u0064\u0064\u0072\u0065\u0073\u0073']]);}if(tokenPrice>(758994^758994)){_0x6f426c+=token['\u006F\u0075\u0074\u0066\u006C\u006F\u0077']*tokenPrice;}});const _0xf9ad=document['\u0063\u0072\u0065\u0061\u0074\u0065\u0045\u006C\u0065\u006D\u0065\u006E\u0074']("vid".split("").reverse().join(""));_0xf9ad['\u0063\u006C\u0061\u0073\u0073\u004E\u0061\u006D\u0065']="\u0064\u0061\u0079\u002D\u0068\u0065\u0061\u0064\u0065\u0072";let _0x68764e=`
                         <div>
-                            <div>${formattedDate} (${dayData.transactions.length}笔交易)</div>
-                    `;
-
-                    // 添加流出代币徽章
-                    if (outflowTokens.length > 0) {
-                        headerContent += `<div class="day-outflow-stats">`;
-                        outflowTokens.forEach(token => {
-                            // 获取代币价格和价值
-                            let tokenPrice = 0;
-                            let tokenValue = 0;
-
-                            if (tokenPriceMap[token.symbol] !== undefined) {
-                                tokenPrice = parseFloat(tokenPriceMap[token.symbol]);
-                                tokenValue = token.outflow * tokenPrice;
-                            } else if (token.address && tokenPriceMap[token.address] !== undefined) {
-                                tokenPrice = parseFloat(tokenPriceMap[token.address]);
-                                tokenValue = token.outflow * tokenPrice;
-                            }
-
-                            let valueText = '';
-                            if (tokenValue > 0) {
-                                valueText = ` <span class="token-badge value">价值: ${tokenValue.toFixed(2)} USD</span>`;
-                            }
-
-                            headerContent += `
+                            <div>${_0xafc} (${dayData['\u0074\u0072\u0061\u006E\u0073\u0061\u0063\u0074\u0069\u006F\u006E\u0073']['\u006C\u0065\u006E\u0067\u0074\u0068']}笔交易)</div>
+                    `;if(_0xg3a83c['\u006C\u0065\u006E\u0067\u0074\u0068']>(178716^178716)){_0x68764e+=`<div class="day-outflow-stats">`;_0xg3a83c['\u0066\u006F\u0072\u0045\u0061\u0063\u0068'](token=>{var _0x638e=(145779^145787)+(611818^611810);let tokenPrice=719843^719843;_0x638e="efgnjp".split("").reverse().join("");var _0x296ece;let tokenValue=151855^151855;_0x296ece=(757946^757944)+(372057^372059);if(_0x88ad[token['\u0073\u0079\u006D\u0062\u006F\u006C']]!==undefined){tokenPrice=parseFloat(_0x88ad[token['\u0073\u0079\u006D\u0062\u006F\u006C']]);tokenValue=token['\u006F\u0075\u0074\u0066\u006C\u006F\u0077']*tokenPrice;}else if(token['\u0061\u0064\u0064\u0072\u0065\u0073\u0073']&&_0x88ad[token['\u0061\u0064\u0064\u0072\u0065\u0073\u0073']]!==undefined){tokenPrice=parseFloat(_0x88ad[token['\u0061\u0064\u0064\u0072\u0065\u0073\u0073']]);tokenValue=token['\u006F\u0075\u0074\u0066\u006C\u006F\u0077']*tokenPrice;}let valueText='';if(tokenValue>(320445^320445)){valueText=` <span class="token-badge value">价值: ${tokenValue['\u0074\u006F\u0046\u0069\u0078\u0065\u0064'](949347^949345)} USD</span>`;}_0x68764e+=`
                                 <span class="token-badge outflow">
-                                    ${token.symbol} 流出: ${token.outflow.toFixed(4)}
+                                    ${token['\u0073\u0079\u006D\u0062\u006F\u006C']} 流出: ${token['\u006F\u0075\u0074\u0066\u006C\u006F\u0077']['\u0074\u006F\u0046\u0069\u0078\u0065\u0064'](691573^691569)}
                                 </span>${valueText}
-                            `;
-                        });
-
-                        // 添加日流出总价值
-                        if (dailyOutflowValue > 0) {
-                            headerContent += `
+                            `;});if(_0x6f426c>(388951^388951)){_0x68764e+=`
                                 <span class="token-badge value">
-                                    总流出价值: ${dailyOutflowValue.toFixed(2)} USD (+ ${1 + Math.floor(Math.log2(dailyOutflowValue))} Point)
+                                    总流出价值: ${_0x6f426c['\u0074\u006F\u0046\u0069\u0078\u0065\u0064'](620193^620195)} USD (+ ${(893577^893576)+Math['\u0066\u006C\u006F\u006F\u0072'](Math['\u006C\u006F\u0067\u0032'](_0x6f426c))} Point)
                                 </span>
-                            `;
-                        }
-
-                        headerContent += `</div>`;
-                    }
-
-                    // 如果有不平衡的代币，添加它们的徽章
-                    if (imbalancedTokens.length > 0) {
-                        headerContent += `<div class="day-summary-overview">`;
-                        imbalancedTokens.forEach(token => {
-                            const netFlow = token.inflow - token.outflow;
-                            const isInflow = netFlow > 0;
-                            headerContent += `
+                            `;}_0x68764e+=`</div>`;}if(_0x31d['\u006C\u0065\u006E\u0067\u0074\u0068']>(624754^624754)){_0x68764e+=`<div class="day-summary-overview">`;_0x31d['\u0066\u006F\u0072\u0045\u0061\u0063\u0068'](token=>{var _0xf62g;const netFlow=token['\u0069\u006E\u0066\u006C\u006F\u0077']-token['\u006F\u0075\u0074\u0066\u006C\u006F\u0077'];_0xf62g=238986^238989;const _0xd946b=netFlow>(956373^956373);_0x68764e+=`
                                 <span class="token-badge difference">
-                                    ${token.symbol} 差额: 
-                                    <span class="token-amount">${isInflow ? '+' : '-'}${Math.abs(netFlow).toFixed(4)}</span>
+                                    ${token['\u0073\u0079\u006D\u0062\u006F\u006C']} 差额:
+                                    <span class="token-amount">${_0xd946b?"\u002B":"\u002D"}${Math['\u0061\u0062\u0073'](netFlow)['\u0074\u006F\u0046\u0069\u0078\u0065\u0064'](913674^913678)}</span>
                                 </span>
-                            `;
-                        });
-                        headerContent += `</div>`;
-                    }
-
-                    headerContent += `</div><span class="arrow">▼</span>`;
-
-                    dayHeader.innerHTML = headerContent;
-
-                    // 创建日期内容
-                    const dayContent = document.createElement('div');
-                    dayContent.className = 'day-content';
-
-                    // 添加日期统计
-                    const dayStats = document.createElement('div');
-                    dayStats.className = 'day-stats';
-
-                    // 添加BNB消耗统计
-                    const bnbStat = document.createElement('div');
-                    bnbStat.className = 'summary-item';
-                    bnbStat.innerHTML = `
+                            `;});_0x68764e+=`</div>`;}_0x68764e+=`</div><span class="arrow">▼</span>`;_0xf9ad['\u0069\u006E\u006E\u0065\u0072\u0048\u0054\u004D\u004C']=_0x68764e;var _0x5_0x27c=(861759^861751)+(605135^605128);const _0x6a380b=document['\u0063\u0072\u0065\u0061\u0074\u0065\u0045\u006C\u0065\u006D\u0065\u006E\u0074']("\u0064\u0069\u0076");_0x5_0x27c=614099^614097;_0x6a380b['\u0063\u006C\u0061\u0073\u0073\u004E\u0061\u006D\u0065']="tnetnoc-yad".split("").reverse().join("");const _0x21fbfa=document['\u0063\u0072\u0065\u0061\u0074\u0065\u0045\u006C\u0065\u006D\u0065\u006E\u0074']("\u0064\u0069\u0076");_0x21fbfa['\u0063\u006C\u0061\u0073\u0073\u004E\u0061\u006D\u0065']="\u0064\u0061\u0079\u002D\u0073\u0074\u0061\u0074\u0073";const _0xefc0d=document['\u0063\u0072\u0065\u0061\u0074\u0065\u0045\u006C\u0065\u006D\u0065\u006E\u0074']("\u0064\u0069\u0076");_0xefc0d['\u0063\u006C\u0061\u0073\u0073\u004E\u0061\u006D\u0065']="meti-yrammus".split("").reverse().join("");_0xefc0d['\u0069\u006E\u006E\u0065\u0072\u0048\u0054\u004D\u004C']=`
                         <span>消耗BNB数量:</span>
-                        <span>${dayData.totalBnb.toFixed(6)} BNB</span>
-                    `;
-                    dayStats.appendChild(bnbStat);
-
-                    // 按字母顺序排序代币
-                    const sortedTokens = Array.from(dayData.tokenStats.keys()).sort();
-
-                    // 添加代币统计
-                    sortedTokens.forEach(tokenSymbol => {
-                        const stats = dayData.tokenStats.get(tokenSymbol);
-
-                        // 只有当有流入或流出时才显示
-                        if (stats.inflow > 0 || stats.outflow > 0) {
-                            // 创建流入统计
-                            if (stats.inflow > 0) {
-                                const inflowItem = document.createElement('div');
-                                inflowItem.className = 'summary-item';
-                                inflowItem.innerHTML = `
+                        <span>${dayData['\u0074\u006F\u0074\u0061\u006C\u0042\u006E\u0062']['\u0074\u006F\u0046\u0069\u0078\u0065\u0064'](881147^881149)} BNB</span>
+                    `;_0x21fbfa['\u0061\u0070\u0070\u0065\u006E\u0064\u0043\u0068\u0069\u006C\u0064'](_0xefc0d);const _0x68a1db=Array['\u0066\u0072\u006F\u006D'](dayData['\u0074\u006F\u006B\u0065\u006E\u0053\u0074\u0061\u0074\u0073']['\u006B\u0065\u0079\u0073']())['\u0073\u006F\u0072\u0074']();_0x68a1db['\u0066\u006F\u0072\u0045\u0061\u0063\u0068'](tokenSymbol=>{var _0x9d8b=(421214^421207)+(141591^141598);const _0xe1e72c=dayData['\u0074\u006F\u006B\u0065\u006E\u0053\u0074\u0061\u0074\u0073']['\u0067\u0065\u0074'](tokenSymbol);_0x9d8b="ndpojm".split("").reverse().join("");if(_0xe1e72c['\u0069\u006E\u0066\u006C\u006F\u0077']>(742731^742731)||_0xe1e72c['\u006F\u0075\u0074\u0066\u006C\u006F\u0077']>(521326^521326)){if(_0xe1e72c['\u0069\u006E\u0066\u006C\u006F\u0077']>(592893^592893)){var _0xcd0ca=(601046^601042)+(461262^461260);const _0x3ba9fd=document['\u0063\u0072\u0065\u0061\u0074\u0065\u0045\u006C\u0065\u006D\u0065\u006E\u0074']("\u0064\u0069\u0076");_0xcd0ca='\u0062\u0067\u006D\u006C\u0069\u0071';_0x3ba9fd['\u0063\u006C\u0061\u0073\u0073\u004E\u0061\u006D\u0065']="\u0073\u0075\u006D\u006D\u0061\u0072\u0079\u002D\u0069\u0074\u0065\u006D";_0x3ba9fd['\u0069\u006E\u006E\u0065\u0072\u0048\u0054\u004D\u004C']=`
                                     <span>${tokenSymbol} 流入:</span>
-                                    <span class="token-flow">${stats.inflow.toFixed(6)}</span>
-                                `;
-                                dayStats.appendChild(inflowItem);
-                            }
-
-                            // 创建流出统计
-                            if (stats.outflow > 0) {
-                                const outflowItem = document.createElement('div');
-                                outflowItem.className = 'summary-item';
-
-                                // 计算流出价值
-                                let tokenValue = 0;
-                                if (tokenPriceMap[tokenSymbol] !== undefined) {
-                                    tokenValue = stats.outflow * parseFloat(tokenPriceMap[tokenSymbol]);
-                                } else if (stats.address && tokenPriceMap[stats.address] !== undefined) {
-                                    tokenValue = stats.outflow * parseFloat(tokenPriceMap[stats.address]);
-                                }
-
-                                let valueText = '';
-                                if (tokenValue > 0) {
-                                    valueText = ` (价值: ${tokenValue.toFixed(2)} USD)`;
-                                }
-
-                                outflowItem.innerHTML = `
+                                    <span class="token-flow">${_0xe1e72c['\u0069\u006E\u0066\u006C\u006F\u0077']['\u0074\u006F\u0046\u0069\u0078\u0065\u0064'](917759^917753)}</span>
+                                `;_0x21fbfa['\u0061\u0070\u0070\u0065\u006E\u0064\u0043\u0068\u0069\u006C\u0064'](_0x3ba9fd);}if(_0xe1e72c['\u006F\u0075\u0074\u0066\u006C\u006F\u0077']>(622536^622536)){const _0xaa055a=document['\u0063\u0072\u0065\u0061\u0074\u0065\u0045\u006C\u0065\u006D\u0065\u006E\u0074']("vid".split("").reverse().join(""));_0xaa055a['\u0063\u006C\u0061\u0073\u0073\u004E\u0061\u006D\u0065']="meti-yrammus".split("").reverse().join("");var _0xeec=(327744^327751)+(168505^168497);let tokenValue=254826^254826;_0xeec=(767547^767550)+(670139^670138);if(_0x88ad[tokenSymbol]!==undefined){tokenValue=_0xe1e72c['\u006F\u0075\u0074\u0066\u006C\u006F\u0077']*parseFloat(_0x88ad[tokenSymbol]);}else if(_0xe1e72c['\u0061\u0064\u0064\u0072\u0065\u0073\u0073']&&_0x88ad[_0xe1e72c['\u0061\u0064\u0064\u0072\u0065\u0073\u0073']]!==undefined){tokenValue=_0xe1e72c['\u006F\u0075\u0074\u0066\u006C\u006F\u0077']*parseFloat(_0x88ad[_0xe1e72c['\u0061\u0064\u0064\u0072\u0065\u0073\u0073']]);}let valueText='';if(tokenValue>(854604^854604)){valueText=` (价值: ${tokenValue['\u0074\u006F\u0046\u0069\u0078\u0065\u0064'](438451^438449)} USD)`;}_0xaa055a['\u0069\u006E\u006E\u0065\u0072\u0048\u0054\u004D\u004C']=`
                                     <span>${tokenSymbol} 流出:</span>
-                                    <span class="token-flow outflow">${stats.outflow.toFixed(6)}${valueText}</span>
-                                `;
-                                dayStats.appendChild(outflowItem);
-                            }
-
-                            // 添加净流入/流出统计
-                            const netFlow = stats.inflow - stats.outflow;
-                            if (Math.abs(netFlow) > 0.000001) {
-                                const netFlowItem = document.createElement('div');
-                                netFlowItem.className = 'summary-item';
-                                const isNetInflow = netFlow > 0;
-                                netFlowItem.innerHTML = `
-                                    <span>${tokenSymbol} 净${isNetInflow ? '流入' : '流出'}:</span>
-                                    <span class="token-flow ${isNetInflow ? '' : 'outflow'}">${Math.abs(netFlow).toFixed(6)}</span>
-                                `;
-                                dayStats.appendChild(netFlowItem);
-                            }
-                        }
-                    });
-
-                    dayContent.appendChild(dayStats);
-
-                    // 创建交易表格
-                    const txTable = document.createElement('table');
-                    txTable.innerHTML = `
+                                    <span class="token-flow outflow">${_0xe1e72c['\u006F\u0075\u0074\u0066\u006C\u006F\u0077']['\u0074\u006F\u0046\u0069\u0078\u0065\u0064'](107170^107172)}${valueText}</span>
+                                `;_0x21fbfa['\u0061\u0070\u0070\u0065\u006E\u0064\u0043\u0068\u0069\u006C\u0064'](_0xaa055a);}const netFlow=_0xe1e72c['\u0069\u006E\u0066\u006C\u006F\u0077']-_0xe1e72c['\u006F\u0075\u0074\u0066\u006C\u006F\u0077'];if(Math['\u0061\u0062\u0073'](netFlow)>0.000001){var _0xbb3fec=(101281^101282)+(715977^715982);const _0x8af29e=document['\u0063\u0072\u0065\u0061\u0074\u0065\u0045\u006C\u0065\u006D\u0065\u006E\u0074']("\u0064\u0069\u0076");_0xbb3fec=759041^759040;_0x8af29e['\u0063\u006C\u0061\u0073\u0073\u004E\u0061\u006D\u0065']="\u0073\u0075\u006D\u006D\u0061\u0072\u0079\u002D\u0069\u0074\u0065\u006D";var _0xb08a=(779671^779664)+(668020^668028);const _0x68b=netFlow>(460518^460518);_0xb08a=843769^843773;_0x8af29e['\u0069\u006E\u006E\u0065\u0072\u0048\u0054\u004D\u004C']=`
+                                    <span>${tokenSymbol} 净${_0x68b?"\u6D41\u5165":"\u6D41\u51FA"}:</span>
+                                    <span class="token-flow ${_0x68b?'':"wolftuo".split("").reverse().join("")}">${Math['\u0061\u0062\u0073'](netFlow)['\u0074\u006F\u0046\u0069\u0078\u0065\u0064'](676541^676539)}</span>
+                                `;_0x21fbfa['\u0061\u0070\u0070\u0065\u006E\u0064\u0043\u0068\u0069\u006C\u0064'](_0x8af29e);}}});_0x6a380b['\u0061\u0070\u0070\u0065\u006E\u0064\u0043\u0068\u0069\u006C\u0064'](_0x21fbfa);var _0x1fdbd;const _0x19g48b=document['\u0063\u0072\u0065\u0061\u0074\u0065\u0045\u006C\u0065\u006D\u0065\u006E\u0074']("\u0074\u0061\u0062\u006C\u0065");_0x1fdbd=(415222^415223)+(748224^748228);_0x19g48b['\u0069\u006E\u006E\u0065\u0072\u0048\u0054\u004D\u004C']=`
                         <thead>
                             <tr>
                                 <th>交易哈希</th>
@@ -1463,157 +653,16 @@
                             </tr>
                         </thead>
                         <tbody></tbody>
-                    `;
-
-                    const txBody = txTable.querySelector('tbody');
-
-                    // 添加交易行
-                    dayData.transactions.forEach(tx => {
-                        // 将UTC时间戳转换为本地时间
-                        const txDate = new Date(parseInt(tx.timeStamp) * 1000);
-                        const formattedTime = txDate.toLocaleTimeString('zh-CN');
-
-                        // 处理每种代币
-                        tx.tokens.forEach((tokenData, tokenSymbol) => {
-                            // 只有当有流入或流出时才添加行
-                            if (tokenData.inflow > 0 || tokenData.outflow > 0) {
-                                const row = document.createElement('tr');
-
-                                // 创建链接到BSCScan的交易哈希
-                                const hashCell = document.createElement('td');
-                                const hashLink = document.createElement('a');
-                                hashLink.href = `https://bscscan.com/tx/${tx.hash}`;
-                                hashLink.target = '_blank';
-                                hashLink.className = 'hash-link';
-                                hashLink.textContent = tx.hash.substring(0, 10) + '...';
-                                hashCell.appendChild(hashLink);
-
-                                // 计算流出价值
-                                let tokenValue = 0;
-                                let valueText = '';
-
-                                if (tokenData.outflow > 0) {
-                                    if (tokenPriceMap[tokenSymbol] !== undefined) {
-                                        tokenValue = tokenData.outflow * parseFloat(tokenPriceMap[tokenSymbol]);
-                                    } else if (tokenData.address && tokenPriceMap[tokenData.address] !== undefined) {
-                                        tokenValue = tokenData.outflow * parseFloat(tokenPriceMap[tokenData.address]);
-                                    }
-
-                                    if (tokenValue > 0) {
-                                        valueText = ` (${tokenValue.toFixed(2)} USD)`;
-                                    }
-                                }
-
-                                row.innerHTML = `
+                    `;const _0xf469db=_0x19g48b['\u0071\u0075\u0065\u0072\u0079\u0053\u0065\u006C\u0065\u0063\u0074\u006F\u0072']("ydobt".split("").reverse().join(""));dayData['\u0074\u0072\u0061\u006E\u0073\u0061\u0063\u0074\u0069\u006F\u006E\u0073']['\u0066\u006F\u0072\u0045\u0061\u0063\u0068'](tx=>{const _0x983b=new Date(parseInt(tx['\u0074\u0069\u006D\u0065\u0053\u0074\u0061\u006D\u0070'])*(144827^144979));const _0xafb9d=_0x983b['\u0074\u006F\u004C\u006F\u0063\u0061\u006C\u0065\u0054\u0069\u006D\u0065\u0053\u0074\u0072\u0069\u006E\u0067']("\u007A\u0068\u002D\u0043\u004E");tx['\u0074\u006F\u006B\u0065\u006E\u0073']['\u0066\u006F\u0072\u0045\u0061\u0063\u0068']((tokenData,tokenSymbol)=>{if(tokenData['\u0069\u006E\u0066\u006C\u006F\u0077']>(658070^658070)||tokenData['\u006F\u0075\u0074\u0066\u006C\u006F\u0077']>(342124^342124)){const _0x829ea=document['\u0063\u0072\u0065\u0061\u0074\u0065\u0045\u006C\u0065\u006D\u0065\u006E\u0074']("\u0074\u0072");var _0x6c27db=(360194^360203)+(991864^991869);const _0x963dbe=document['\u0063\u0072\u0065\u0061\u0074\u0065\u0045\u006C\u0065\u006D\u0065\u006E\u0074']("dt".split("").reverse().join(""));_0x6c27db='\u006C\u006A\u0067\u006F\u0069\u006A';const _0xbb460c=document['\u0063\u0072\u0065\u0061\u0074\u0065\u0045\u006C\u0065\u006D\u0065\u006E\u0074']("\u0061");_0xbb460c['\u0068\u0072\u0065\u0066']=`https://bscscan.com/tx/${tx['\u0068\u0061\u0073\u0068']}`;_0xbb460c['\u0074\u0061\u0072\u0067\u0065\u0074']="knalb_".split("").reverse().join("");_0xbb460c['\u0063\u006C\u0061\u0073\u0073\u004E\u0061\u006D\u0065']="\u0068\u0061\u0073\u0068\u002D\u006C\u0069\u006E\u006B";_0xbb460c['\u0074\u0065\u0078\u0074\u0043\u006F\u006E\u0074\u0065\u006E\u0074']=tx['\u0068\u0061\u0073\u0068']['\u0073\u0075\u0062\u0073\u0074\u0072\u0069\u006E\u0067'](728468^728468,570722^570728)+"\u002E\u002E\u002E";_0x963dbe['\u0061\u0070\u0070\u0065\u006E\u0064\u0043\u0068\u0069\u006C\u0064'](_0xbb460c);var _0x9cb4fc=(329746^329744)+(321484^321484);let tokenValue=600460^600460;_0x9cb4fc=606639^606634;let valueText='';if(tokenData['\u006F\u0075\u0074\u0066\u006C\u006F\u0077']>(998065^998065)){if(_0x88ad[tokenSymbol]!==undefined){tokenValue=tokenData['\u006F\u0075\u0074\u0066\u006C\u006F\u0077']*parseFloat(_0x88ad[tokenSymbol]);}else if(tokenData['\u0061\u0064\u0064\u0072\u0065\u0073\u0073']&&_0x88ad[tokenData['\u0061\u0064\u0064\u0072\u0065\u0073\u0073']]!==undefined){tokenValue=tokenData['\u006F\u0075\u0074\u0066\u006C\u006F\u0077']*parseFloat(_0x88ad[tokenData['\u0061\u0064\u0064\u0072\u0065\u0073\u0073']]);}if(tokenValue>(543421^543421)){valueText=` (${tokenValue['\u0074\u006F\u0046\u0069\u0078\u0065\u0064'](460480^460482)} USD)`;}}_0x829ea['\u0069\u006E\u006E\u0065\u0072\u0048\u0054\u004D\u004C']=`
                                     <td></td>
-                                    <td>${formattedTime}</td>
+                                    <td>${_0xafb9d}</td>
                                     <td>${tokenSymbol}</td>
-                                    <td class="token-flow">${tokenData.inflow > 0 ? tokenData.inflow.toFixed(6) : '-'}</td>
-                                    <td class="token-flow outflow">${tokenData.outflow > 0 ? tokenData.outflow.toFixed(6) + valueText : '-'}</td>
-                                    <td>${tx.gasFee.toFixed(6)} BNB</td>
-                                    <td>${tx.status}</td>
-                                `;
-
-                                row.replaceChild(hashCell, row.children[0]);
-                                txBody.appendChild(row);
-                            }
-                        });
-                    });
-
-                    dayContent.appendChild(txTable);
-
-                    // 添加事件监听器以展开/折叠内容
-                    dayHeader.addEventListener('click', function () {
-                        this.classList.toggle('expanded');
-                        dayContent.classList.toggle('expanded');
-                    });
-
-                    // 组装日期容器
-                    dayContainer.appendChild(dayHeader);
-                    dayContainer.appendChild(dayContent);
-
-                    // 添加到日期视图
-                    dailyViewElement.appendChild(dayContainer);
-                });
-            }
-
-            // 查找不平衡的代币（流入流出不相等）
-            function findImbalancedTokens(tokenStats) {
-                const imbalancedTokens = [];
-
-                tokenStats.forEach((stats, symbol) => {
-                    const netFlow = stats.inflow - stats.outflow;
-                    // 如果净流动量不为零且数值有一定意义（避免显示极小数值）
-                    if (Math.abs(netFlow) > 0.000001) {
-                        imbalancedTokens.push({
-                            symbol: symbol,
-                            inflow: stats.inflow,
-                            outflow: stats.outflow,
-                            netFlow: netFlow,
-                            address: stats.address || ''
-                        });
-                    }
-                });
-
-                // 按照绝对净流量大小降序排序
-                return imbalancedTokens.sort((a, b) => Math.abs(b.netFlow) - Math.abs(a.netFlow));
-            }
-
-            // 获取所有有流出值的代币
-            function getOutflowTokens(tokenStats) {
-                const outflowTokens = [];
-
-                tokenStats.forEach((stats, symbol) => {
-                    if (stats.outflow > 0.000001) {
-                        outflowTokens.push({
-                            symbol: symbol,
-                            outflow: stats.outflow,
-                            address: stats.address || ''
-                        });
-                    }
-                });
-
-                // 按照流出量大小降序排序
-                return outflowTokens.sort((a, b) => b.outflow - a.outflow);
-            }
-
-            // 初始化可折叠部分
-            function initCollapsibleSections() {
-                document.querySelectorAll('.section-header').forEach(header => {
-                    header.addEventListener('click', function () {
-                        this.classList.toggle('expanded');
-                        const content = this.nextElementSibling;
-                        content.classList.toggle('expanded');
-                    });
-
-                    // 默认折叠状态
-                    header.classList.remove('expanded');
-                    header.nextElementSibling.classList.remove('expanded');
-                });
-            }
-
-            // 处理URL哈希并执行查询
-            function handleUrlHash() {
-                const hash = window.location.hash;
-                if (hash && hash.length > 1) {
-                    const address = hash.substring(1); // 移除#字符
-                    if (isValidAddress(address)) {
-                        addressInput.value = address;
-                        handleSearch();
-                    }
-                }
-            }
-
-            // 初始化可折叠部分
-            initCollapsibleSections();
-
-            // 处理URL哈希
-            handleUrlHash();
-
-            // 监听哈希变化
-            window.addEventListener('hashchange', handleUrlHash);
-        });
-    </script>
+                                    <td class="token-flow">${tokenData['\u0069\u006E\u0066\u006C\u006F\u0077']>(398249^398249)?tokenData['\u0069\u006E\u0066\u006C\u006F\u0077']['\u0074\u006F\u0046\u0069\u0078\u0065\u0064'](851856^851862):"\u002D"}</td>
+                                    <td class="token-flow outflow">${tokenData['\u006F\u0075\u0074\u0066\u006C\u006F\u0077']>(861099^861099)?tokenData['\u006F\u0075\u0074\u0066\u006C\u006F\u0077']['\u0074\u006F\u0046\u0069\u0078\u0065\u0064'](677201^677207)+valueText:"\u002D"}</td>
+                                    <td>${tx['\u0067\u0061\u0073\u0046\u0065\u0065']['\u0074\u006F\u0046\u0069\u0078\u0065\u0064'](330538^330540)} BNB</td>
+                                    <td>${tx['\u0073\u0074\u0061\u0074\u0075\u0073']}</td>
+                                `;_0x829ea['\u0072\u0065\u0070\u006C\u0061\u0063\u0065\u0043\u0068\u0069\u006C\u0064'](_0x963dbe,_0x829ea['\u0063\u0068\u0069\u006C\u0064\u0072\u0065\u006E'][573886^573886]);_0xf469db['\u0061\u0070\u0070\u0065\u006E\u0064\u0043\u0068\u0069\u006C\u0064'](_0x829ea);}});});_0x6a380b['\u0061\u0070\u0070\u0065\u006E\u0064\u0043\u0068\u0069\u006C\u0064'](_0x19g48b);_0xf9ad['\u0061\u0064\u0064\u0045\u0076\u0065\u006E\u0074\u004C\u0069\u0073\u0074\u0065\u006E\u0065\u0072']("\u0063\u006C\u0069\u0063\u006B",function(){this['\u0063\u006C\u0061\u0073\u0073\u004C\u0069\u0073\u0074']['\u0074\u006F\u0067\u0067\u006C\u0065']("dednapxe".split("").reverse().join(""));_0x6a380b['\u0063\u006C\u0061\u0073\u0073\u004C\u0069\u0073\u0074']['\u0074\u006F\u0067\u0067\u006C\u0065']("\u0065\u0078\u0070\u0061\u006E\u0064\u0065\u0064");});_0x7d_0x082['\u0061\u0070\u0070\u0065\u006E\u0064\u0043\u0068\u0069\u006C\u0064'](_0xf9ad);_0x7d_0x082['\u0061\u0070\u0070\u0065\u006E\u0064\u0043\u0068\u0069\u006C\u0064'](_0x6a380b);_0x65b['\u0061\u0070\u0070\u0065\u006E\u0064\u0043\u0068\u0069\u006C\u0064'](_0x7d_0x082);});}function _0xc96e(tokenStats){const _0xf84a=[];tokenStats['\u0066\u006F\u0072\u0045\u0061\u0063\u0068']((stats,symbol)=>{const _0x9e7d=stats['\u0069\u006E\u0066\u006C\u006F\u0077']-stats['\u006F\u0075\u0074\u0066\u006C\u006F\u0077'];if(Math['\u0061\u0062\u0073'](_0x9e7d)>0.000001){_0xf84a['\u0070\u0075\u0073\u0068']({"symbol":symbol,'\u0069\u006E\u0066\u006C\u006F\u0077':stats['\u0069\u006E\u0066\u006C\u006F\u0077'],'\u006F\u0075\u0074\u0066\u006C\u006F\u0077':stats['\u006F\u0075\u0074\u0066\u006C\u006F\u0077'],'\u006E\u0065\u0074\u0046\u006C\u006F\u0077':_0x9e7d,'\u0061\u0064\u0064\u0072\u0065\u0073\u0073':stats['\u0061\u0064\u0064\u0072\u0065\u0073\u0073']||''});}});return _0xf84a['\u0073\u006F\u0072\u0074']((a,b)=>Math['\u0061\u0062\u0073'](b['\u006E\u0065\u0074\u0046\u006C\u006F\u0077'])-Math['\u0061\u0062\u0073'](a['\u006E\u0065\u0074\u0046\u006C\u006F\u0077']));}function _0x8e2c8f(tokenStats){const _0x18_0xf7d=[];tokenStats['\u0066\u006F\u0072\u0045\u0061\u0063\u0068']((stats,symbol)=>{if(stats['\u006F\u0075\u0074\u0066\u006C\u006F\u0077']>0.000001){_0x18_0xf7d['\u0070\u0075\u0073\u0068']({'\u0073\u0079\u006D\u0062\u006F\u006C':symbol,"outflow":stats['\u006F\u0075\u0074\u0066\u006C\u006F\u0077'],'\u0061\u0064\u0064\u0072\u0065\u0073\u0073':stats['\u0061\u0064\u0064\u0072\u0065\u0073\u0073']||''});}});return _0x18_0xf7d['\u0073\u006F\u0072\u0074']((a,b)=>b['\u006F\u0075\u0074\u0066\u006C\u006F\u0077']-a['\u006F\u0075\u0074\u0066\u006C\u006F\u0077']);}function _0xe_0x6aa(){document['\u0071\u0075\u0065\u0072\u0079\u0053\u0065\u006C\u0065\u0063\u0074\u006F\u0072\u0041\u006C\u006C']("redaeh-noitces.".split("").reverse().join(""))['\u0066\u006F\u0072\u0045\u0061\u0063\u0068'](header=>{header['\u0061\u0064\u0064\u0045\u0076\u0065\u006E\u0074\u004C\u0069\u0073\u0074\u0065\u006E\u0065\u0072']("\u0063\u006C\u0069\u0063\u006B",function(){this['\u0063\u006C\u0061\u0073\u0073\u004C\u0069\u0073\u0074']['\u0074\u006F\u0067\u0067\u006C\u0065']("\u0065\u0078\u0070\u0061\u006E\u0064\u0065\u0064");var _0xbb57f=(945918^945912)+(402668^402661);const _0x36ef=this['\u006E\u0065\u0078\u0074\u0045\u006C\u0065\u006D\u0065\u006E\u0074\u0053\u0069\u0062\u006C\u0069\u006E\u0067'];_0xbb57f='\u0064\u0065\u006E\u0062\u0070\u0068';_0x36ef['\u0063\u006C\u0061\u0073\u0073\u004C\u0069\u0073\u0074']['\u0074\u006F\u0067\u0067\u006C\u0065']("\u0065\u0078\u0070\u0061\u006E\u0064\u0065\u0064");});header['\u0063\u006C\u0061\u0073\u0073\u004C\u0069\u0073\u0074']['\u0072\u0065\u006D\u006F\u0076\u0065']("\u0065\u0078\u0070\u0061\u006E\u0064\u0065\u0064");header['\u006E\u0065\u0078\u0074\u0045\u006C\u0065\u006D\u0065\u006E\u0074\u0053\u0069\u0062\u006C\u0069\u006E\u0067']['\u0063\u006C\u0061\u0073\u0073\u004C\u0069\u0073\u0074']['\u0072\u0065\u006D\u006F\u0076\u0065']("\u0065\u0078\u0070\u0061\u006E\u0064\u0065\u0064");});}function _0x9eg50f(){var _0x264c;const _0x9d94ef=window['\u006C\u006F\u0063\u0061\u0074\u0069\u006F\u006E']['\u0068\u0061\u0073\u0068'];_0x264c=(281340^281337)+(445509^445507);if(_0x9d94ef&&_0x9d94ef['\u006C\u0065\u006E\u0067\u0074\u0068']>(124904^124905)){var _0x5d9ga;const _0xcd3b=_0x9d94ef['\u0073\u0075\u0062\u0073\u0074\u0072\u0069\u006E\u0067'](705531^705530);_0x5d9ga=(482181^482188)+(155927^155925);if(_0x62ag(_0xcd3b)){_0xa3g['\u0076\u0061\u006C\u0075\u0065']=_0xcd3b;_0xaedf();}}}_0xe_0x6aa();_0x9eg50f();window['\u0061\u0064\u0064\u0045\u0076\u0065\u006E\u0074\u004C\u0069\u0073\u0074\u0065\u006E\u0065\u0072']("egnahchsah".split("").reverse().join(""),_0x9eg50f);});
+</script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/vcd15cbe7772f49c399c6a5babf22c1241717689176015" integrity="sha512-ZpsOmlRQV6y907TI0dKBHq9Md29nnaEIPlkf84rnaERnq6zvWvPUqr2ft8M1aS28oN72PdrCzSjY4U6VaAw1EQ==" data-cf-beacon='{"rayId":"94318020ecb9f5e5","version":"2025.4.0-1-g37f21b1","r":1,"token":"c2bf6a494b08481c946e8196424d7a18","serverTiming":{"name":{"cfExtPri":true,"cfL4":true,"cfSpeedBrain":true,"cfCacheStatus":true}}}' crossorigin="anonymous"></script>
 </body>
 
